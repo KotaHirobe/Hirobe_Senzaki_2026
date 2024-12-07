@@ -3,6 +3,22 @@
 Soundlevel <- read.csv("c:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/dbalv.csv")
 print(head(Soundlevel))
 
+library(ggplot2)
+library(tidyr)
+
+long_data <- Soundlevel %>%
+  pivot_longer(
+    cols = c(d1609, d1616, d1648, d1636, d1628, h1403, h1803, h201001, h201604, whitenoise, no_sounds),
+    names_to = "variable",
+    values_to = "value"
+  )
+
+# Plot the data
+ggplot(long_data, aes(x = dist, y = value, color = variable, group = variable)) +
+  geom_line() +
+  labs(title = "Sound Levels Over Distance", x = "Distance", y = "Sound Level") +
+  theme_bw(base_size = 11)
+
 
 
 #####
