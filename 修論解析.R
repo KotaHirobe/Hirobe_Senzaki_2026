@@ -98,12 +98,12 @@ library(geosphere)
 # 新しい列 "site_number" を追加し、初期値をNAに設定
 merged_data$site_number <- NA
 
-# 半径200m以内の座標に番号を付与
+# 半径150m以内の座標に番号を付与
 for (i in 1:nrow(merged_data)) {
   current_coords <- c(merged_data$longitude[i], merged_data$latitude[i])
   distances <- distHaversine(current_coords, 
                              cbind(merged_data$longitude, merged_data$latitude))
-  within_radius <- which(distances <= 200)
+  within_radius <- which(distances <= 150)
   merged_data$site_number[within_radius] <- i
 }
 
@@ -113,12 +113,12 @@ merged_data$site_number <- match(merged_data$site_number, unique_sites)
 
 
 ###
-#200m離れていなくて1週間あけてとっていないデータを削除
+#150m離れていなくて1週間あけてとっていないデータを削除
 # 名前番号が昇順になるように並び替え
 merged_data$day <- as.Date(merged_data$day)
 merged_data <- merged_data[order(merged_data$site_number, merged_data$名前番号), ]
 
-#同じ種で200m離れていないかつ7日以上日付が空いていないデータの片方を省けるようにする
+#同じ種で150m離れていないかつ7日以上日付が空いていないデータの片方を省けるようにする
 merged_data <- merged_data %>%
   arrange(site_number, species, day_count) %>% # site_numberとspeciesでグループ化しdayで並べ替え
   group_by(site_number, species) %>%
@@ -144,7 +144,7 @@ Red_fox <-  subset(merged_data, species == "Red fox")
 ###
 #種ごとの行動圏にあわせて番号を設定
 #シカ
-# 半径2000m以内の座標に番号を付与
+# 半径1800m以内の座標に番号を付与
 #Laneng et al. 2023を参照
 for (i in 1:nrow(Deer)) {
   # 現在の座標の緯度と経度を取得
@@ -155,7 +155,7 @@ for (i in 1:nrow(Deer)) {
                              cbind(Deer$longitude, Deer$latitude))
   
   # 200m以内の座標のインデックスを取得
-  Deer_within_radius <- which(Deer_distances <= 1000)
+  Deer_within_radius <- which(Deer_distances <= 1800)
   
   # "site_number" 列に番号を付与（現在の座標も含む）
   Deer$site_number[Deer_within_radius] <- i
@@ -177,7 +177,7 @@ library(ggplot2)
 #シカ
 # lmer()でGLMMを構築
 Deer_model <- lmer(
-  FID-AD ~ cues + day_or_night * log(light + 1) + time_num + day_count + flock + noise + SD + (1 | site_number),
+  FID ~ cues + day_or_night * log(light + 1)  + day_count + flock + noise + SD + MaxWind + (1 | site_number),
   data = Deer
 )
 
@@ -185,7 +185,7 @@ Deer_model <- lmer(
 summary(Deer_model)
 
 library(car)
-vif(lm(FID ~ cues + day_or_night + time_num + day_count + flock + noise + SD, data = Deer))
+vif(lm(FID ~ cues + day_or_night*log(light + 1) + day_count + flock + noise + SD, data = Deer))
 
 
 # 推定値の信頼区間を計算
@@ -223,99 +223,6 @@ ggplot(results, aes(x = estimate, y = term)) +
   theme_classic()
 
 
-#シカ夜のみ
-# lmer()でGLMMを構築
-filtered_data_night_Deer <-subset(filtered_data, species == "Deer" & day_or_night == "night") 
-
-Deer_model_night <- lmer(
-  FID ~ cues + flock + noise + light + SD + (1 | site_number),
-  data = filtered_data_night_Deer
-)
-
-# 結果の確認
-summary(Deer_model_night)
-
-# 推定値の信頼区間を計算
-conf_intervals_night <- confint(Deer_model_night)
-# 不必要な行を除外
-conf_intervals_night <- conf_intervals_night[!rownames(conf_intervals_night) %in% c(".sig01", ".sigma"), ]
-
-# 推定値を取得
-estimates <- summary(Deer_model_night)$coefficients
-
-# データフレームに変換
-results <- data.frame(
-  term = rownames(estimates),
-  estimate = estimates[, "Estimate"],
-  lwr = conf_intervals_night[, 1],
-  upr = conf_intervals_night[, 2]
-)
-
-# NAの行を削除
-results <- na.omit(results)
-
-# 推定値と信頼区間のプロット
-# termを因子型にして逆順に設定
-results$term <- factor(results$term, levels = rev(unique(results$term)))
-
-ggplot(results, aes(x = estimate, y = term)) +
-  geom_point(size = 3) +  # 推定値の点
-  scale_y_discrete() +
-  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
-  labs(title = "Estimated Coefficients with Confidence Intervals",
-       x = "Predictor Variables",
-       y = "Estimated Values") +
-  geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-5, 5)) +
-  theme_classic()
-
-
-#シカ昼のみ
-# lmer()でGLMMを構築
-filtered_data_day_Deer <-subset(filtered_data, species == "Deer" & day_or_night == "day") 
-
-Deer_model_day <- lmer(
-  FID ~ cues + flock + noise + log(light+1) + (1 | site_number),
-  data = filtered_data_day_Deer,
-  offset = log(visitation)
-)
-
-# 結果の確認
-summary(Deer_model_day)
-
-# 推定値の信頼区間を計算
-conf_intervals_day <- confint(Deer_model_day)
-# 不必要な行を除外
-conf_intervals_day <- conf_intervals_day[!rownames(conf_intervals_day) %in% c(".sig01", ".sigma"), ]
-
-# 推定値を取得
-estimates <- summary(Deer_model_day)$coefficients
-
-# データフレームに変換
-results <- data.frame(
-  term = rownames(estimates),
-  estimate = estimates[, "Estimate"],
-  lwr = conf_intervals_day[, 1],
-  upr = conf_intervals_day[, 2]
-)
-
-# NAの行を削除
-results <- na.omit(results)
-
-# 推定値と信頼区間のプロット
-# termを因子型にして逆順に設定
-results$term <- factor(results$term, levels = rev(unique(results$term)))
-
-ggplot(results, aes(x = estimate, y = term)) +
-  geom_point(size = 3) +  # 推定値の点
-  scale_y_discrete() +
-  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
-  labs(title = "Estimated Coefficients with Confidence Intervals",
-       x = "Predictor Variables",
-       y = "Estimated Values") +
-  geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-100, 100)) +
-  theme_classic()
 
 ###
 #相関の図示
