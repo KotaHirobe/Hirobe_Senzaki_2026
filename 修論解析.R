@@ -224,6 +224,56 @@ ggplot(results, aes(x = estimate, y = term)) +
 
 
 
+#####
+#cell-means法の実行
+Deer_model_cell_means <- lmer(
+  FID ~ cues + day_or_night * log(light + 1)  + day_count + flock + noise + SD + MaxWind - 1 + (1 | site_number),
+  data = Deer
+)
+summary(Deer_model_cell_means)
+
+library(emmeans)
+
+# 各水準の平均を比較
+library(emmeans)
+emmeans(Deer_model_cell_means, pairwise ~ cues)
+
+
+# 推定値の信頼区間を計算
+conf_intervals_cell_means <- confint(Deer_model_cell_means)
+# 不必要な行を除外
+conf_intervals_cell_means <- conf_intervals_cell_means[!rownames(conf_intervals_cell_means) %in% c(".sig01", ".sigma"), ]
+
+# 推定値を取得
+estimates_cell_means <- summary(Deer_model_cell_means)$coefficients
+
+# データフレームに変換
+results_cell_means <- data.frame(
+  term = rownames(estimates_cell_means),
+  estimate = estimates_cell_means[, "Estimate"],
+  lwr = conf_intervals_cell_means[, 1],
+  upr = conf_intervals_cell_means[, 2]
+)
+
+# NAの行を削除
+results_cell_means <- na.omit(results_cell_means)
+
+# 推定値と信頼区間のプロット
+# termを因子型にして逆順に設定
+results_cell_means$term <- factor(results_cell_means$term, levels = rev(unique(results_cell_means$term)))
+
+ggplot(results_cell_means, aes(x = estimate, y = term)) +
+  geom_point(size = 3) +  # 推定値の点
+  scale_y_discrete() +
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
+  labs(title = "Estimated Coefficients with Confidence Intervals",
+       x = "Predictor Variables",
+       y = "Estimated Values") +
+  geom_vline(xintercept = 0, linetype = "dotted") +
+  coord_cartesian(xlim = c(-50, 50)) +
+  theme_classic()
+
+
 ###
 #相関の図示
 # 数値データのみを抽出
@@ -291,3 +341,43 @@ ggplot(data = Deer, aes(x = cues, y = SD)) +
 ggplot(data = Deer, aes(x = cues, y = site_number)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter()
+
+
+library(sf) # 地理データの操作用
+library(maps)
+
+# 日本地図の取得
+japan_map <- map_data("world", region = "Japan")
+
+ggplot() +
+  # 背景地図
+  geom_polygon(
+    data = japan_map,
+    aes(x = long, y = lat, group = group),
+    fill = "lightgray",
+    color = "black"
+  ) +
+  # site_number のプロット
+  geom_point(
+    data = Deer,
+    aes(x = longitude, y = latitude),
+    color = "black"
+  ) +
+  # ラベルの追加
+  geom_text(
+    data = Deer,
+    aes(x = longitude, y = latitude, label = site_number),
+    hjust = -0.2, vjust = -0.2, color = "blue"
+  ) +
+  # 表示範囲の指定
+  coord_cartesian(
+    xlim = c(141.7, 142),
+    ylim = c(42.5, 42.8)
+  ) +
+  # テーマとタイトル
+  theme_minimal() +
+  labs(
+    title = "Site Number Distribution on the Map",
+    x = "Longitude",
+    y = "Latitude"
+  )
