@@ -238,6 +238,9 @@ library(emmeans)
 library(emmeans)
 emmeans(Deer_model_cell_means, pairwise ~ cues)
 
+# 比較（カスタムコントラスト）
+contrast_results <- contrast(emmeans(Deer_model_cell_means, ~ cues), method = "trt.vs.ctrl", adjust = "none")
+summary(contrast_results)
 
 # 推定値の信頼区間を計算
 conf_intervals_cell_means <- confint(Deer_model_cell_means)
