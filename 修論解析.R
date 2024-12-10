@@ -140,6 +140,8 @@ table(merged_data$species)
 Deer <- subset(merged_data, species == "Deer")
 Red_fox <-  subset(merged_data, species == "Red fox")
 
+ggplot(Deer, aes(x = site_number, fill = cues))+
+  geom_bar(stat = "count")
 
 ###
 #種ごとの行動圏にあわせて番号を設定
