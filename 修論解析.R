@@ -229,7 +229,7 @@ ggplot(results, aes(x = estimate, y = term)) +
 #####
 #cell-means法の実行
 Deer_model_cell_means <- lmer(
-  FID ~ cues + day_or_night * log(light + 1)  + day_count + flock + noise + SD + MaxWind - 1 + (1 | site_number),
+  log(FID) ~ cues + day_or_night * log(light + 1)  + day_count + flock + noise + log(SD) + MaxWind - 1 + (1 | site_number),
   data = Deer
 )
 summary(Deer_model_cell_means)
@@ -275,7 +275,7 @@ ggplot(results_cell_means, aes(x = estimate, y = term)) +
        x = "Predictor Variables",
        y = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-50, 50)) +
+  coord_cartesian(xlim = c(-1, 1)) +
   theme_classic()
 
 
