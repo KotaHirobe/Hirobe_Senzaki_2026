@@ -179,7 +179,7 @@ library(ggplot2)
 #シカ
 # lmer()でGLMMを構築
 Deer_model <- lmer(
-  FID ~ cues + day_or_night * log(light + 1)  + day_count + flock + noise + SD + MaxWind + (1 | site_number),
+  log(FID) ~ cues + day_or_night * log(light + 1)  + day_count + flock + noise + log(SD) + MaxWind + (1 | site_number),
   data = Deer
 )
 
@@ -221,7 +221,7 @@ ggplot(results, aes(x = estimate, y = term)) +
        x = "Predictor Variables",
        y = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-50, 50)) +
+  coord_cartesian(xlim = c(-1, 1)) +
   theme_classic()
 
 
@@ -266,6 +266,9 @@ ggplot(merged_data, aes(x = as.factor(cues), y = FID)) +
 
 ###
 #説明変数の分布をプロット
+ggplot(data = Deer, aes(x=cues, y=FID)) +
+  geom_boxplot()
+
 ggplot(data = Deer, aes(x=cues, y=light)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter()
