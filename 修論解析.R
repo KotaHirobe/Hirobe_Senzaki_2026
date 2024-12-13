@@ -319,7 +319,7 @@ ggplot(merged_data, aes(x = as.factor(cues), y = FID)) +
 
 ###
 #説明変数の分布をプロット
-ggplot(data = Deer, aes(x=cues, y=FID)) +
+ggplot(data = Deer, aes(x=cues, y=log(FID))) +
   geom_boxplot()
 
 ggplot(data = Deer, aes(x=cues, y=light)) +
@@ -342,9 +342,8 @@ ggplot(data = Deer, aes(x = cues, y = day_count)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter()
 
-ggplot(data = Deer, aes(x = cues, y = SD)) +
-  geom_boxplot(outliers = FALSE) +
-  geom_jitter()
+ggplot(data = Deer, aes(x = cues, y = log(SD))) +
+  geom_boxplot(outliers = TRUE)
 
 ggplot(data = Deer, aes(x = cues, y = site_number)) +
   geom_boxplot(outliers = FALSE) +
