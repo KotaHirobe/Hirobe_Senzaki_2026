@@ -54,7 +54,7 @@ FIDdata$day_or_night <- ifelse(FIDdata$time >= FIDdata$sunrise & FIDdata$time <=
 print(head(FIDdata))
 table(FIDdata$day_or_night)
 
-#時間データをGLMMで使えるよう小数にする
+#時間データをGLMMで使えるよう小数にする#時間データをGLMMで使えるよう小数にする
 FIDdata$time_num <- hour(FIDdata$time) + minute(FIDdata$time)/60
 
 
@@ -169,6 +169,21 @@ unique_sites <- unique(na.omit(Deer$site_number))
 Deer$site_number <- match(Deer$site_number, unique_sites)
 
 
+#外れ値の除去
+Deer_nonoutliers <- Deer %>%
+  group_by(cues) %>% # 'cue' 列でグループ化
+  filter(
+    FID >= quantile(FID, 0.25) - 1.5 * IQR(FID),
+    FID <= quantile(FID, 0.75) + 1.5 * IQR(FID)
+  ) %>%
+  ungroup()
+
+ggplot(data = Deer_nonoutliers, aes(x = cues, y = FID)) +
+  geom_boxplot()
+
+#比較用
+ggplot(data = Deer, aes(x = cues, y = FID)) +
+  geom_boxplot()
 
 ###
 #GLMM
@@ -179,15 +194,15 @@ library(ggplot2)
 #シカ
 # lmer()でGLMMを構築
 Deer_model <- lmer(
-  log(FID) ~ cues + day_or_night * log(light + 1)  + day_count + flock + noise + log(SD) + MaxWind + (1 | site_number),
-  data = Deer
+  FID ~ cues + day_or_night * log(light + 1)  + day_count + flock + noise + SD + MaxWind + (1 | site_number),
+  data = Deer_nonoutliers
 )
 
 # 結果の確認
 summary(Deer_model)
 
 library(car)
-vif(lm(FID ~ cues + day_or_night*log(light + 1) + day_count + flock + noise + SD, data = Deer))
+vif(lm(FID ~ cues + day_or_night*log(light + 1) + day_count + flock + noise + SD + MaxWind, data = Deer_nonoutliers))
 
 
 # 推定値の信頼区間を計算
@@ -221,53 +236,42 @@ ggplot(results, aes(x = estimate, y = term)) +
        x = "Predictor Variables",
        y = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-1, 1)) +
+  coord_cartesian(xlim = c(-50, 50)) +
   theme_classic()
 
-
-
-#####
-#cell-means法の実行
-Deer_model_cell_means <- lmer(
-  log(FID) ~ cues + day_or_night * log(light + 1)  + day_count + flock + noise + log(SD) + MaxWind - 1 + (1 | site_number),
-  data = Deer
+#AD
+Deer_model_AD <- lmer(
+  log(AD) ~ cues + day_or_night * log(light + 1)  + day_count + flock + noise + log(SD) + MaxWind + (1 | site_number),
+  data = Deer_nonoutliers
 )
-summary(Deer_model_cell_means)
 
-library(emmeans)
-
-# 各水準の平均を比較
-library(emmeans)
-emmeans(Deer_model_cell_means, pairwise ~ cues)
-
-# 比較（カスタムコントラスト）
-contrast_results <- contrast(emmeans(Deer_model_cell_means, ~ cues), method = "trt.vs.ctrl", adjust = "none")
-summary(contrast_results)
+# 結果の確認
+summary(Deer_model_AD)
 
 # 推定値の信頼区間を計算
-conf_intervals_cell_means <- confint(Deer_model_cell_means)
+conf_intervals_Deer_AD <- confint(Deer_model_AD)
 # 不必要な行を除外
-conf_intervals_cell_means <- conf_intervals_cell_means[!rownames(conf_intervals_cell_means) %in% c(".sig01", ".sigma"), ]
+conf_intervals_Deer_AD <- conf_intervals_Deer_AD[!rownames(conf_intervals_Deer_AD) %in% c(".sig01", ".sigma"), ]
 
 # 推定値を取得
-estimates_cell_means <- summary(Deer_model_cell_means)$coefficients
+estimates_AD <- summary(Deer_model_AD)$coefficients
 
 # データフレームに変換
-results_cell_means <- data.frame(
-  term = rownames(estimates_cell_means),
-  estimate = estimates_cell_means[, "Estimate"],
-  lwr = conf_intervals_cell_means[, 1],
-  upr = conf_intervals_cell_means[, 2]
+results_AD <- data.frame(
+  term = rownames(estimates_AD),
+  estimate_AD = estimates_AD[, "Estimate"],
+  lwr = conf_intervals_Deer_AD[, 1],
+  upr = conf_intervals_Deer_AD[, 2]
 )
 
 # NAの行を削除
-results_cell_means <- na.omit(results_cell_means)
+results_AD <- na.omit(results_AD)
 
 # 推定値と信頼区間のプロット
 # termを因子型にして逆順に設定
-results_cell_means$term <- factor(results_cell_means$term, levels = rev(unique(results_cell_means$term)))
+results_AD$term <- factor(results_AD$term, levels = rev(unique(results_AD$term)))
 
-ggplot(results_cell_means, aes(x = estimate, y = term)) +
+ggplot(results_AD, aes(x = estimate_AD, y = term)) +
   geom_point(size = 3) +  # 推定値の点
   scale_y_discrete() +
   geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
@@ -277,6 +281,9 @@ ggplot(results_cell_means, aes(x = estimate, y = term)) +
   geom_vline(xintercept = 0, linetype = "dotted") +
   coord_cartesian(xlim = c(-1, 1)) +
   theme_classic()
+
+
+
 
 
 ###
