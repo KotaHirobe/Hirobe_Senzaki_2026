@@ -140,8 +140,6 @@ table(merged_data$species)
 Deer <- subset(merged_data, species == "Deer")
 Red_fox <-  subset(merged_data, species == "Red fox")
 
-ggplot(Deer, aes(x = site_number, fill = cues))+
-  geom_bar(stat = "count")
 
 ###
 #種ごとの行動圏にあわせて番号を設定
@@ -178,12 +176,25 @@ Deer_nonoutliers <- Deer %>%
   ) %>%
   ungroup()
 
+# 重複を解消して連続した番号にする
+unique_sites_n <- unique(na.omit(Deer_nonoutliers$site_number))
+Deer_nonoutliers$site_number <- match(Deer_nonoutliers$site_number, unique_sites_n)
+
 ggplot(data = Deer_nonoutliers, aes(x = cues, y = FID)) +
+  geom_boxplot()
+
+ggplot(data = Deer_nonoutliers, aes(x = cues, y = AD)) +
   geom_boxplot()
 
 #比較用
 ggplot(data = Deer, aes(x = cues, y = FID)) +
   geom_boxplot()
+
+ggplot(data = Deer, aes(x = cues, y = AD)) +
+  geom_boxplot()
+
+ggplot(Deer_nonoutliers, aes(x = site_number, fill = cues))+
+  geom_bar(stat = "count")
 
 ###
 #GLMM
@@ -221,6 +232,7 @@ results <- data.frame(
   upr = conf_intervals_Deer[, 2]
 )
 
+
 # NAの行を削除
 results <- na.omit(results)
 
@@ -232,16 +244,17 @@ ggplot(results, aes(x = estimate, y = term)) +
   geom_point(size = 3) +  # 推定値の点
   scale_y_discrete() +
   geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
-  labs(title = "Estimated Coefficients with Confidence Intervals",
+  labs(title = "Flight Initiation Distance",
        x = "Predictor Variables",
        y = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-50, 50)) +
+  coord_cartesian(xlim = c(-1, 1)) +
   theme_classic()
+
 
 #AD
 Deer_model_AD <- lmer(
-  log(AD) ~ cues + day_or_night * log(light + 1)  + day_count + flock + noise + log(SD) + MaxWind + (1 | site_number),
+  AD ~ cues + day_or_night * log(light + 1)  + day_count + flock + noise + SD + MaxWind + (1 | site_number),
   data = Deer_nonoutliers
 )
 
@@ -275,11 +288,11 @@ ggplot(results_AD, aes(x = estimate_AD, y = term)) +
   geom_point(size = 3) +  # 推定値の点
   scale_y_discrete() +
   geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
-  labs(title = "Estimated Coefficients with Confidence Intervals",
+  labs(title = "Alart Distance",
        x = "Predictor Variables",
        y = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-1, 1)) +
+  coord_cartesian(xlim = c(-50, 50)) +
   theme_classic()
 
 
@@ -295,13 +308,10 @@ numeric_data <- merged_data[sapply(merged_data, is.numeric)]
 cor_matrix <- cor(numeric_data, use = "complete.obs")
 print(cor_matrix)
 
-
 library(corrplot)
 
 # 相関行列のプロット
 corrplot(cor_matrix, method = "circle")
-
-
 
 #相関の図示
 # 数値データのみを抽出
@@ -314,45 +324,45 @@ print(cor_deer)
 
 
 
-library(ggplot2)
-ggplot(merged_data, aes(x = as.factor(cues), y = FID)) +
-  geom_boxplot() +
-  labs(title = "Comparison of FID by Cues",
-       x = "Cues",
-       y = "FID") +
-  theme_bw(base_size = 18)
-
-
-
 ###
 #説明変数の分布をプロット
-ggplot(data = Deer, aes(x=cues, y=log(FID))) +
+ggplot(data = Deer_nonoutliers, aes(x = cues, fill = day_or_night)) +
+  geom_bar(stat = "count")
+
+#サンプルサイズは外れ値の除去により変動するので注意
+table(Deer_nonoutliers$day_or_night, by = Deer_nonoutliers$cues)
+table(Deer$day_or_night, by = Deer$cues)
+
+ggplot(data = Deer_nonoutliers, aes(x=cues, y=FID)) +
   geom_boxplot()
 
-ggplot(data = Deer, aes(x=cues, y=light)) +
+ggplot(data = Deer_nonoutliers, aes(x=cues, y=AD)) +
+  geom_boxplot()
+
+ggplot(data = Deer_nonoutliers, aes(x=cues, y=light)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter()
 
-ggplot(data = Deer, aes(x = cues, y = flock)) +
+ggplot(data = Deer_nonoutliers, aes(x = cues, y = flock)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter()
 
-ggplot(data = Deer, aes(x = cues, y = noise)) +
+ggplot(data = Deer_nonoutliers, aes(x = cues, y = noise)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter()
 
-ggplot(data = Deer, aes(x = cues, y = time_num)) +
+ggplot(data = Deer_nonoutliers, aes(x = cues, y = time)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter()
 
-ggplot(data = Deer, aes(x = cues, y = day_count)) +
+ggplot(data = Deer_nonoutliers, aes(x = cues, y = day_count)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter()
 
-ggplot(data = Deer, aes(x = cues, y = log(SD))) +
+ggplot(data = Deer_nonoutliers, aes(x = cues, y = SD)) +
   geom_boxplot(outliers = TRUE)
 
-ggplot(data = Deer, aes(x = cues, y = site_number)) +
+ggplot(data = Deer_nonoutliers, aes(x = cues, y = site_number)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter()
 
@@ -373,13 +383,13 @@ ggplot() +
   ) +
   # site_number のプロット
   geom_point(
-    data = Deer,
+    data = Deer_nonoutliers,
     aes(x = longitude, y = latitude),
     color = "black"
   ) +
   # ラベルの追加
   geom_text(
-    data = Deer,
+    data = Deer_nonoutliers,
     aes(x = longitude, y = latitude, label = site_number),
     hjust = -0.2, vjust = -0.2, color = "blue"
   ) +
