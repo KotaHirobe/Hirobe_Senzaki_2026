@@ -135,8 +135,8 @@ merged_data <- merged_data %>%
   mutate(
     season = case_when(
       format(day, "%m") %in% c("08", "09") ~ "Summer",
-      format(day, "%m") %in% c("10", "11") ~ "Breed",
-      format(day, "%m") %in% c("12") ~ "Winter"
+      format(day, "%m") %in% c("10", "11") ~ "Fall",
+      format(day, "%m") %in% c ("12") ~ "Winter"
     )
   )
 
@@ -149,62 +149,51 @@ print(head(merged_data))
 ###
 #種ごとに分割
 Deer <- subset(merged_data, species == "Deer")
-Red_fox <-  subset(merged_data, species == "Red fox")
 
 
 ###
-#種ごとの行動圏にあわせて番号を設定
-#シカ
-# 半径1800m以内の座標に番号を付与
+#行動圏にあわせて番号を設定
+#冬半径1800m、夏半径1100m以内の座標に番号を付与
+#コアエリアは冬700m、夏400mでよさそう
 #Laneng et al. 2023を参照
+
+library(geosphere) # distHaversine関数のため
+
+# サイト番号列を初期化
+Deer$site_number <- NA
+
+# 最大半径（700m）でクラスタリング
 for (i in 1:nrow(Deer)) {
-  # 現在の座標の緯度と経度を取得
+  # 現在の座標
   Deer_coords <- c(Deer$longitude[i], Deer$latitude[i])
   
-  # 現在の座標から他の全ての座標までの距離を計算
-  Deer_distances <- distHaversine(Deer_coords, 
-                             cbind(Deer$longitude, Deer$latitude))
+  # 距離計算（700m以内）
+  Deer_distances <- distHaversine(Deer_coords, cbind(Deer$longitude, Deer$latitude))
+  Deer_within_radius <- which(Deer_distances <= 700)
   
-  # 200m以内の座標のインデックスを取得
-  Deer_within_radius <- which(Deer_distances <= 1800)
+  # サイト番号を割り当て
+  if (is.na(Deer$site_number[i])) {
+    Deer$site_number[Deer_within_radius] <- i
+  }
+}
+
+# 季節ごとに適用
+Deer$seasonal_site_number <- NA
+for (i in 1:nrow(Deer)) {
+  # 現在の座標
+  Deer_coords <- c(Deer$longitude[i], Deer$latitude[i])
   
-  # "site_number" 列に番号を付与（現在の座標も含む）
-  Deer$site_number[Deer_within_radius] <- i
+  # 距離計算（季節ごとに半径を切り替える）
+  radius <- ifelse(Deer$season[i] == "Winter", 700, 400)
+  Deer_distances <- distHaversine(Deer_coords, cbind(Deer$longitude, Deer$latitude))
+  Deer_within_radius <- which(Deer_distances <= radius)
+  
+  # 基準となるサイト番号を利用
+  Deer$seasonal_site_number[Deer_within_radius] <- Deer$site_number[i]
 }
 
 
-# 重複を解消して連続した番号にする
-unique_sites <- unique(na.omit(Deer$site_number))
-Deer$site_number <- match(Deer$site_number, unique_sites)
-
-
-#外れ値の除去
-Deer_nonoutliers <- Deer %>%
-  group_by(cues) %>% # 'cue' 列でグループ化
-  filter(
-    FID >= quantile(FID, 0.25) - 1.5 * IQR(FID),
-    FID <= quantile(FID, 0.75) + 1.5 * IQR(FID)
-  ) %>%
-  ungroup()
-
-# 重複を解消して連続した番号にする
-unique_sites_n <- unique(na.omit(Deer_nonoutliers$site_number))
-Deer_nonoutliers$site_number <- match(Deer_nonoutliers$site_number, unique_sites_n)
-
-ggplot(data = Deer_nonoutliers, aes(x = cues, y = FID)) +
-  geom_boxplot()
-
-ggplot(data = Deer_nonoutliers, aes(x = cues, y = AD)) +
-  geom_boxplot()
-
-#比較用
-ggplot(data = Deer, aes(x = cues, y = FID)) +
-  geom_boxplot()
-
-ggplot(data = Deer, aes(x = cues, y = AD)) +
-  geom_boxplot()
-
-ggplot(Deer_nonoutliers, aes(x = site_number, fill = cues))+
+ggplot(Deer, aes(x = seasonal_site_number, fill = cues))+
   geom_bar(stat = "count")
 
 ###
@@ -216,7 +205,7 @@ library(ggplot2)
 #シカ
 # lmer()でGLMMを構築
 Deer_model <- lmer(
-  FID ~ cues + log(light + 1)  + flock + noise + SD + MaxWind + season + (1 | site_number),
+  FID ~ cues + log(light + 1) + noise + SD  + flock + MaxWind + season + (1 | seasonal_site_number),
   data = Deer
 )
 
@@ -224,7 +213,7 @@ Deer_model <- lmer(
 summary(Deer_model)
 
 library(car)
-vif(lm(FID ~ cues + day_or_night*log(light + 1) + day_count + flock + noise + SD + MaxWind, data = Deer_nonoutliers))
+vif(lm(FID ~ cues + log(light + 1) + flock + noise + SD + MaxWind + season, data = Deer))
 
 
 # 推定値の信頼区間を計算
@@ -259,13 +248,13 @@ ggplot(results, aes(x = estimate, y = term)) +
        x = "Predictor Variables",
        y = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-50, 50)) +
+  coord_cartesian(xlim = c(-1, 1)) +
   theme_classic()
 
 
 #AD
 Deer_model_AD <- lmer(
-  AD ~ cues + day_or_night * log(light + 1)  + day_count + flock + noise + SD + MaxWind + (1 | site_number),
+  AD ~ cues + log(light + 1) +  flock + noise + SD + MaxWind + season + (1 | seasonal_site_number),
   data = Deer
 )
 
@@ -337,11 +326,9 @@ print(cor_deer)
 
 ###
 #説明変数の分布をプロット
-ggplot(data = Deer_nonoutliers, aes(x = cues, fill = day_or_night)) +
+ggplot(data = Deer, aes(x = cues, fill = day_or_night)) +
   geom_bar(stat = "count")
 
-#サンプルサイズは外れ値の除去により変動するので注意
-table(Deer_nonoutliers$day_or_night, by = Deer_nonoutliers$cues)
 table(Deer$day_or_night, by = Deer$cues)
 
 ggplot(data = Deer_nonoutliers, aes(x=cues, y=FID)) +
