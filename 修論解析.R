@@ -130,6 +130,17 @@ merged_data <- merged_data %>%
 head(merged_data)
 table(merged_data$species)
 
+#季節を追加
+merged_data <- merged_data %>%
+  mutate(
+    season = case_when(
+      format(day, "%m") %in% c("08", "09") ~ "Summer",
+      format(day, "%m") %in% c("10", "11") ~ "Breed",
+      format(day, "%m") %in% c("12") ~ "Winter"
+    )
+  )
+
+print(head(merged_data))
 
 
 
@@ -205,8 +216,8 @@ library(ggplot2)
 #シカ
 # lmer()でGLMMを構築
 Deer_model <- lmer(
-  FID ~ cues + day_or_night * log(light + 1)  + day_count + flock + noise + SD + MaxWind + (1 | site_number),
-  data = Deer_nonoutliers
+  FID ~ cues + log(light + 1)  + flock + noise + SD + MaxWind + season + (1 | site_number),
+  data = Deer
 )
 
 # 結果の確認
@@ -244,18 +255,18 @@ ggplot(results, aes(x = estimate, y = term)) +
   geom_point(size = 3) +  # 推定値の点
   scale_y_discrete() +
   geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
-  labs(title = "Flight Initiation Distance",
+  labs(title = "Flight Initiation Distance without outliers",
        x = "Predictor Variables",
        y = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-1, 1)) +
+  coord_cartesian(xlim = c(-50, 50)) +
   theme_classic()
 
 
 #AD
 Deer_model_AD <- lmer(
   AD ~ cues + day_or_night * log(light + 1)  + day_count + flock + noise + SD + MaxWind + (1 | site_number),
-  data = Deer_nonoutliers
+  data = Deer
 )
 
 # 結果の確認
