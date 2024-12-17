@@ -192,6 +192,10 @@ for (i in 1:nrow(Deer)) {
   Deer$seasonal_site_number[Deer_within_radius] <- Deer$site_number[i]
 }
 
+# 重複を解消して連続した番号にする
+unique_sites <- unique(na.omit(Deer$seasonal_site_number))
+Deer$seasonal_site_number <- match(Deer$seasonal_site_number, unique_sites)
+
 
 ggplot(Deer, aes(x = seasonal_site_number, fill = cues))+
   geom_bar(stat = "count")
@@ -381,14 +385,14 @@ ggplot() +
   ) +
   # site_number のプロット
   geom_point(
-    data = Deer_nonoutliers,
+    data = Deer,
     aes(x = longitude, y = latitude),
     color = "black"
   ) +
   # ラベルの追加
   geom_text(
-    data = Deer_nonoutliers,
-    aes(x = longitude, y = latitude, label = site_number),
+    data = Deer,
+    aes(x = longitude, y = latitude, label = seasonal_site_number),
     hjust = -0.2, vjust = -0.2, color = "blue"
   ) +
   # 表示範囲の指定
@@ -399,7 +403,7 @@ ggplot() +
   # テーマとタイトル
   theme_minimal() +
   labs(
-    title = "Site Number Distribution on the Map",
+    title = "Site Number Distribution",
     x = "Longitude",
     y = "Latitude"
   )
