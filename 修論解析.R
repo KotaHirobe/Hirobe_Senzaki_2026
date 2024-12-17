@@ -407,3 +407,66 @@ ggplot() +
     x = "Longitude",
     y = "Latitude"
   )
+
+
+
+#比較用700mのみ、こいつよりも400mがあるぶんサイトは多くなるはず
+
+Deer$site_number_comp <- NA
+
+for (i in 1:nrow(Deer)) {
+  # 現在の座標の緯度と経度を取得
+  Deer_coords <- c(Deer$longitude[i], Deer$latitude[i])
+  
+  # 現在の座標から他の全ての座標までの距離を計算
+  Deer_distances <- distHaversine(Deer_coords, 
+                                  cbind(Deer$longitude, Deer$latitude))
+  
+  # 200m以内の座標のインデックスを取得
+  Deer_within_radius <- which(Deer_distances <= 700)
+  
+  # "site_number" 列に番号を付与（現在の座標も含む）
+  Deer$site_number_comp[Deer_within_radius] <- i
+}
+
+
+# 重複を解消して連続した番号にする
+unique_sites <- unique(na.omit(Deer$site_number_comp))
+Deer$site_number_comp <- match(Deer$site_number_comp, unique_sites)
+
+ggplot(Deer, aes(x = site_number_comp, fill = cues))+
+  geom_bar(stat = "count")
+
+
+ggplot() +
+  # 背景地図
+  geom_polygon(
+    data = japan_map,
+    aes(x = long, y = lat, group = group),
+    fill = "lightgray",
+    color = "black"
+  ) +
+  # site_number のプロット
+  geom_point(
+    data = Deer,
+    aes(x = longitude, y = latitude),
+    color = "black"
+  ) +
+  # ラベルの追加
+  geom_text(
+    data = Deer,
+    aes(x = longitude, y = latitude, label = site_number_comp),
+    hjust = -0.2, vjust = -0.2, color = "blue"
+  ) +
+  # 表示範囲の指定
+  coord_cartesian(
+    xlim = c(141.7, 142),
+    ylim = c(42.5, 42.8)
+  ) +
+  # テーマとタイトル
+  theme_minimal() +
+  labs(
+    title = "Site Number Compare",
+    x = "Longitude",
+    y = "Latitude"
+  )
