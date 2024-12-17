@@ -153,18 +153,17 @@ Deer <- subset(merged_data, species == "Deer")
 
 ###
 #行動圏にあわせて番号を設定
-#冬半径1800m、夏半径1100m以内の座標に番号を付与
-#コアエリアは冬700m、夏400mでよさそう
+#冬半径1800m、夏半径1100m
+#コアエリアは冬700m、夏400m
 #Laneng et al. 2023を参照
 
-library(geosphere) # distHaversine関数のため
+library(geosphere) 
 
-# サイト番号列を初期化
-# 季節ごとに適用
-Deer$site_number_Winter <- NA
-Deer$site_number_nonWinter <- NA
+# サイト番号列
+Deer$site_number_core <- NA
+Deer$site_number_home <- NA
 
-# 最大半径（700m）でクラスタリング
+# コアエリア最大半径（700m）でクラスタリング
 for (i in 1:nrow(Deer)) {
   # 現在の座標
   Deer_coords <- c(Deer$longitude[i], Deer$latitude[i])
@@ -174,37 +173,37 @@ for (i in 1:nrow(Deer)) {
   Deer_within_radius <- which(Deer_distances <= 700)
   
   # サイト番号を割り当て
-  if (is.na(Deer$site_number_Winter[i])) {
-    Deer$site_number_Winter[Deer_within_radius] <- i
+  if (is.na(Deer$site_number_core[i])) {
+    Deer$site_number_core[Deer_within_radius] <- i
   }
 }
 
-# 最大半径（400m）でクラスタリング
+# ホームレンジ最大半径（1800m）でクラスタリング
 for (i in 1:nrow(Deer)) {
   # 現在の座標
   Deer_coords <- c(Deer$longitude[i], Deer$latitude[i])
   
-  # 距離計算（400m以内）
+  # 距離計算（1800m以内）
   Deer_distances <- distHaversine(Deer_coords, cbind(Deer$longitude, Deer$latitude))
-  Deer_within_radius <- which(Deer_distances <= 400)
+  Deer_within_radius <- which(Deer_distances <= 1800)
   
   # サイト番号を割り当て
-  if (is.na(Deer$site_number_nonWinter[i])) {
-    Deer$site_number_nonWinter[Deer_within_radius] <- i
+  if (is.na(Deer$site_number_home[i])) {
+    Deer$site_number_home[Deer_within_radius] <- i
   }
 }
 
 # 重複を解消して連続した番号にする
-unique_sites <- unique(na.omit(Deer$site_number_Winter))
-Deer$site_number_Winter <- match(Deer$site_number_Winter, unique_sites)
+unique_sites <- unique(na.omit(Deer$site_number_core))
+Deer$site_number_core <- match(Deer$site_number_core, unique_sites)
 
-unique_sites <- unique(na.omit(Deer$site_number_nonWinter))
-Deer$site_number_nonWinter <- match(Deer$site_number_nonWinter, unique_sites)
+unique_sites <- unique(na.omit(Deer$site_number_home))
+Deer$site_number_home <- match(Deer$site_number_home, unique_sites)
 
-ggplot(Deer, aes(x = site_number_Winter, fill = cues))+
+ggplot(Deer, aes(x = site_number_core, fill = cues))+
   geom_bar(stat = "count")
 
-ggplot(Deer, aes(x = site_number_nonWinter, fill = cues))+
+ggplot(Deer, aes(x = site_number_home, fill = cues))+
   geom_bar(stat = "count")
 
 ###
@@ -217,7 +216,7 @@ library(ggplot2)
 # lmer()でGLMMを構築
 Deer_model <- lmer(
   FID ~ cues + log(light + 1) + noise + SD  + flock + MaxWind + season +
-    (1 | site_number_nonWinter:season) + (1 | site_number_Winter:season),
+    (1 | site_number_core) + (1 | site_number_home),
   data = Deer
 )
 
@@ -256,18 +255,18 @@ ggplot(results, aes(x = estimate, y = term)) +
   geom_point(size = 3) +  # 推定値の点
   scale_y_discrete() +
   geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
-  labs(title = "Flight Initiation Distance without outliers",
+  labs(title = "Flight Initiation Distance",
        x = "Predictor Variables",
        y = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-1, 1)) +
+  coord_cartesian(xlim = c(-50, 50)) +
   theme_classic()
 
 
 #AD
 Deer_model_AD <- lmer(
   AD ~ cues + log(light + 1) +  flock + noise + SD + MaxWind + season +
-    (1 | site_number_nonWinter:season) + (1 | site_number_Winter:season),
+    (1 | site_number_core) + (1 | site_number_home),
   data = Deer
 )
 
