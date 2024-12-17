@@ -160,7 +160,9 @@ Deer <- subset(merged_data, species == "Deer")
 library(geosphere) # distHaversine関数のため
 
 # サイト番号列を初期化
-Deer$site_number <- NA
+# 季節ごとに適用
+Deer$site_number_Winter <- NA
+Deer$site_number_nonWinter <- NA
 
 # 最大半径（700m）でクラスタリング
 for (i in 1:nrow(Deer)) {
@@ -172,32 +174,37 @@ for (i in 1:nrow(Deer)) {
   Deer_within_radius <- which(Deer_distances <= 700)
   
   # サイト番号を割り当て
-  if (is.na(Deer$site_number[i])) {
-    Deer$site_number[Deer_within_radius] <- i
+  if (is.na(Deer$site_number_Winter[i])) {
+    Deer$site_number_Winter[Deer_within_radius] <- i
   }
 }
 
-# 季節ごとに適用
-Deer$seasonal_site_number <- NA
+# 最大半径（400m）でクラスタリング
 for (i in 1:nrow(Deer)) {
   # 現在の座標
   Deer_coords <- c(Deer$longitude[i], Deer$latitude[i])
   
-  # 距離計算（季節ごとに半径を切り替える）
-  radius <- ifelse(Deer$season[i] == "Winter", 700, 400)
+  # 距離計算（400m以内）
   Deer_distances <- distHaversine(Deer_coords, cbind(Deer$longitude, Deer$latitude))
-  Deer_within_radius <- which(Deer_distances <= radius)
+  Deer_within_radius <- which(Deer_distances <= 400)
   
-  # 基準となるサイト番号を利用
-  Deer$seasonal_site_number[Deer_within_radius] <- Deer$site_number[i]
+  # サイト番号を割り当て
+  if (is.na(Deer$site_number_nonWinter[i])) {
+    Deer$site_number_nonWinter[Deer_within_radius] <- i
+  }
 }
 
 # 重複を解消して連続した番号にする
-unique_sites <- unique(na.omit(Deer$seasonal_site_number))
-Deer$seasonal_site_number <- match(Deer$seasonal_site_number, unique_sites)
+unique_sites <- unique(na.omit(Deer$site_number_Winter))
+Deer$site_number_Winter <- match(Deer$site_number_Winter, unique_sites)
 
+unique_sites <- unique(na.omit(Deer$site_number_nonWinter))
+Deer$site_number_nonWinter <- match(Deer$site_number_nonWinter, unique_sites)
 
-ggplot(Deer, aes(x = seasonal_site_number, fill = cues))+
+ggplot(Deer, aes(x = site_number_Winter, fill = cues))+
+  geom_bar(stat = "count")
+
+ggplot(Deer, aes(x = site_number_nonWinter, fill = cues))+
   geom_bar(stat = "count")
 
 ###
@@ -209,7 +216,8 @@ library(ggplot2)
 #シカ
 # lmer()でGLMMを構築
 Deer_model <- lmer(
-  FID ~ cues + log(light + 1) + noise + SD  + flock + MaxWind + season + (1 | seasonal_site_number),
+  FID ~ cues + log(light + 1) + noise + SD  + flock + MaxWind + season +
+    (1 | site_number_nonWinter:season) + (1 | site_number_Winter:season),
   data = Deer
 )
 
@@ -258,7 +266,8 @@ ggplot(results, aes(x = estimate, y = term)) +
 
 #AD
 Deer_model_AD <- lmer(
-  AD ~ cues + log(light + 1) +  flock + noise + SD + MaxWind + season + (1 | seasonal_site_number),
+  AD ~ cues + log(light + 1) +  flock + noise + SD + MaxWind + season +
+    (1 | site_number_nonWinter:season) + (1 | site_number_Winter:season),
   data = Deer
 )
 
@@ -296,35 +305,10 @@ ggplot(results_AD, aes(x = estimate_AD, y = term)) +
        x = "Predictor Variables",
        y = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-50, 50)) +
+  coord_cartesian(xlim = c(-1, 1)) +
   theme_classic()
 
 
-
-
-
-###
-#相関の図示
-# 数値データのみを抽出
-numeric_data <- merged_data[sapply(merged_data, is.numeric)]
-
-# 相関行列を計算
-cor_matrix <- cor(numeric_data, use = "complete.obs")
-print(cor_matrix)
-
-library(corrplot)
-
-# 相関行列のプロット
-corrplot(cor_matrix, method = "circle")
-
-#相関の図示
-# 数値データのみを抽出
-deer_data_night$dif <- deer_data_night$SD - deer_data_night$FID
-numeric_data_deer <- deer_data_night[sapply(deer_data_night, is.numeric)]
-
-# 相関行列を計算
-cor_deer <- cor(numeric_data_deer, use = "complete.obs")
-print(cor_deer)
 
 
 
@@ -335,36 +319,36 @@ ggplot(data = Deer, aes(x = cues, fill = day_or_night)) +
 
 table(Deer$day_or_night, by = Deer$cues)
 
-ggplot(data = Deer_nonoutliers, aes(x=cues, y=FID)) +
+ggplot(data = Deer, aes(x=cues, y=FID)) +
   geom_boxplot()
 
-ggplot(data = Deer_nonoutliers, aes(x=cues, y=AD)) +
+ggplot(data = Deer, aes(x=cues, y=AD)) +
   geom_boxplot()
 
-ggplot(data = Deer_nonoutliers, aes(x=cues, y=light)) +
+ggplot(data = Deer, aes(x=cues, y=light)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter()
 
-ggplot(data = Deer_nonoutliers, aes(x = cues, y = flock)) +
+ggplot(data = Deer, aes(x = cues, y = flock)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter()
 
-ggplot(data = Deer_nonoutliers, aes(x = cues, y = noise)) +
+ggplot(data = Deer, aes(x = cues, y = noise)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter()
 
-ggplot(data = Deer_nonoutliers, aes(x = cues, y = time)) +
+ggplot(data = Deer, aes(x = cues, y = time)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter()
 
-ggplot(data = Deer_nonoutliers, aes(x = cues, y = day_count)) +
+ggplot(data = Deer, aes(x = cues, y = day_count)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter()
 
-ggplot(data = Deer_nonoutliers, aes(x = cues, y = SD)) +
+ggplot(data = Deer, aes(x = cues, y = SD)) +
   geom_boxplot(outliers = TRUE)
 
-ggplot(data = Deer_nonoutliers, aes(x = cues, y = site_number)) +
+ggplot(data = Deer, aes(x = cues, y = site_number)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter()
 
@@ -404,69 +388,6 @@ ggplot() +
   theme_minimal() +
   labs(
     title = "Site Number Distribution",
-    x = "Longitude",
-    y = "Latitude"
-  )
-
-
-
-#比較用700mのみ、こいつよりも400mがあるぶんサイトは多くなるはず
-
-Deer$site_number_comp <- NA
-
-for (i in 1:nrow(Deer)) {
-  # 現在の座標の緯度と経度を取得
-  Deer_coords <- c(Deer$longitude[i], Deer$latitude[i])
-  
-  # 現在の座標から他の全ての座標までの距離を計算
-  Deer_distances <- distHaversine(Deer_coords, 
-                                  cbind(Deer$longitude, Deer$latitude))
-  
-  # 200m以内の座標のインデックスを取得
-  Deer_within_radius <- which(Deer_distances <= 700)
-  
-  # "site_number" 列に番号を付与（現在の座標も含む）
-  Deer$site_number_comp[Deer_within_radius] <- i
-}
-
-
-# 重複を解消して連続した番号にする
-unique_sites <- unique(na.omit(Deer$site_number_comp))
-Deer$site_number_comp <- match(Deer$site_number_comp, unique_sites)
-
-ggplot(Deer, aes(x = site_number_comp, fill = cues))+
-  geom_bar(stat = "count")
-
-
-ggplot() +
-  # 背景地図
-  geom_polygon(
-    data = japan_map,
-    aes(x = long, y = lat, group = group),
-    fill = "lightgray",
-    color = "black"
-  ) +
-  # site_number のプロット
-  geom_point(
-    data = Deer,
-    aes(x = longitude, y = latitude),
-    color = "black"
-  ) +
-  # ラベルの追加
-  geom_text(
-    data = Deer,
-    aes(x = longitude, y = latitude, label = site_number_comp),
-    hjust = -0.2, vjust = -0.2, color = "blue"
-  ) +
-  # 表示範囲の指定
-  coord_cartesian(
-    xlim = c(141.7, 142),
-    ylim = c(42.5, 42.8)
-  ) +
-  # テーマとタイトル
-  theme_minimal() +
-  labs(
-    title = "Site Number Compare",
     x = "Longitude",
     y = "Latitude"
   )
