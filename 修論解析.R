@@ -8,7 +8,7 @@ library(tidyr)
 
 long_data <- Soundlevel %>%
   pivot_longer(
-    cols = c(d1609, d1616, d1648, d1636, d1628, h1403, h1803, h201001, h201604, whitenoise, no_sounds),
+    cols = c(d1609, d1616, d1648, d1636, d1628, h1403, h1604, h1803, h201001, h201604, whitenoise, no_sounds),
     names_to = "variable",
     values_to = "value"
   )
@@ -16,7 +16,7 @@ long_data <- Soundlevel %>%
 # Plot the data
 ggplot(long_data, aes(x = dist, y = value, color = variable, group = variable)) +
   geom_line() +
-  labs(title = "Sound Levels Over Distance", x = "Distance", y = "Sound Level") +
+  labs(title = "Sound Levels Over Distance", x = "Distance(m)", y = "Sound Level(dBA)") +
   theme_bw(base_size = 11)
 
 
@@ -134,9 +134,8 @@ table(merged_data$species)
 merged_data <- merged_data %>%
   mutate(
     season = case_when(
-      format(day, "%m") %in% c("08", "09") ~ "Summer",
-      format(day, "%m") %in% c("10", "11") ~ "Fall",
-      format(day, "%m") %in% c ("12") ~ "Winter"
+      format(day, "%m") %in% c("08", "09", "12") ~ "NonBreeding",
+      format(day, "%m") %in% c("10", "11") ~ "Breeding"
     )
   )
 
@@ -214,9 +213,10 @@ library(ggplot2)
 
 #シカ
 # lmer()でGLMMを構築
+#現時点ではcoreのランダム効果がない方が説明しやすい結果
 Deer_model <- lmer(
   FID ~ cues + log(light + 1) + noise + SD  + flock + MaxWind + season +
-    (1 | site_number_core) + (1 | site_number_home),
+    (1 | site_number_home),
   data = Deer
 )
 
@@ -230,7 +230,7 @@ vif(lm(FID ~ cues + log(light + 1) + flock + noise + SD + MaxWind + season, data
 # 推定値の信頼区間を計算
 conf_intervals_Deer <- confint(Deer_model)
 # 不必要な行を除外
-conf_intervals_Deer <- conf_intervals_Deer[!rownames(conf_intervals_Deer) %in% c(".sig01", ".sigma"), ]
+conf_intervals_Deer <- conf_intervals_Deer[!rownames(conf_intervals_Deer) %in% c(".sig01", ".sig02",  ".sigma"), ]
 
 # 推定値を取得
 estimates <- summary(Deer_model)$coefficients
@@ -249,7 +249,25 @@ results <- na.omit(results)
 
 # 推定値と信頼区間のプロット
 # termを因子型にして逆順に設定
-results$term <- factor(results$term, levels = rev(unique(results$term)))
+results <-  results %>%
+  mutate(term = factor(term, levels = c(
+    "seasonNonBreeding",
+    "MaxWind",
+    "flock",
+    "SD",
+    "noise",
+    "log(light + 1)",
+    "cueshuman_vi_no_dog_vi",
+    "cueshuman_vi_dog_vi_ac",
+    "cueshuman_vi_ac_dog_vi",
+    "cueshuman_vi_dog_ac",
+    "cueshuman_vi_dog_vi",
+    "cueshuman_vi_no",
+    "cueshuman_vi_ac",
+    "(Intercept)"
+  )))
+
+
 
 ggplot(results, aes(x = estimate, y = term)) +
   geom_point(size = 3) +  # 推定値の点
@@ -259,14 +277,25 @@ ggplot(results, aes(x = estimate, y = term)) +
        x = "Predictor Variables",
        y = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-50, 50)) +
-  theme_classic()
+  coord_cartesian(xlim = c(-30, 50)) +
+  theme_classic() +
+  scale_y_discrete(
+    labels = c("cueshuman_vi_ac" = "Human(both)",
+               "cueshuman_vi_ac_dog_vi" = "Human(both) & Dog(visual)",
+               "cueshuman_vi_dog_ac" = "Human(visual) & Dog(acoustic)",
+               "cueshuman_vi_dog_vi" = "Human(visual) & Dog(visual)",
+               "cueshuman_vi_dog_vi_ac" = "Human(visual) & Dog(both)",
+               "cueshuman_vi_no" = "Human(visual) & Whitenoise",
+               "cueshuman_vi_no_dog_vi" = "Human(visual) & Dog(visual) & Whitenoise",
+               "log(light + 1)" = "light",
+               "seasonNonBreeding" = "Season(non-breeding)")
+  )
 
 
 #AD
 Deer_model_AD <- lmer(
   AD ~ cues + log(light + 1) +  flock + noise + SD + MaxWind + season +
-    (1 | site_number_core) + (1 | site_number_home),
+    (1 | site_number_home),
   data = Deer
 )
 
@@ -276,7 +305,7 @@ summary(Deer_model_AD)
 # 推定値の信頼区間を計算
 conf_intervals_Deer_AD <- confint(Deer_model_AD)
 # 不必要な行を除外
-conf_intervals_Deer_AD <- conf_intervals_Deer_AD[!rownames(conf_intervals_Deer_AD) %in% c(".sig01", ".sigma"), ]
+conf_intervals_Deer_AD <- conf_intervals_Deer_AD[!rownames(conf_intervals_Deer_AD) %in% c(".sig01", ".sig02",  ".sigma"), ]
 
 # 推定値を取得
 estimates_AD <- summary(Deer_model_AD)$coefficients
@@ -304,14 +333,26 @@ ggplot(results_AD, aes(x = estimate_AD, y = term)) +
        x = "Predictor Variables",
        y = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-1, 1)) +
-  theme_classic()
+  coord_cartesian(xlim = c(-40, 50)) +
+  theme_classic() +
+  scale_y_discrete(
+    labels = c("cueshuman_vi_ac" = "Human(both)",
+               "cueshuman_vi_ac_dog_vi" = "Human(both) & Dog(visual)",
+               "cueshuman_vi_dog_ac" = "Human(visual) & Dog(acoustic)",
+               "cueshuman_vi_dog_vi" = "Human(visual) & Dog(visual)",
+               "cueshuman_vi_dog_vi_ac" = "Human(visual) & Dog(both)",
+               "cueshuman_vi_no" = "Human(visual) & Whitenoise",
+               "cueshuman_vi_no_dog_vi" = "Human(visual) & Dog(visual) & Whitenoise",
+               "log(light + 1)" = "light",
+               "seasonNonBreeding" = "Season(non-breeding)")
+  )
 
 
 
 
 
-###
+
+;###
 #説明変数の分布をプロット
 ggplot(data = Deer, aes(x = cues, fill = day_or_night)) +
   geom_bar(stat = "count")
