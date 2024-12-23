@@ -226,6 +226,9 @@ summary(Deer_model)
 library(car)
 vif(lm(FID ~ cues + log(light + 1) + flock + noise + SD + MaxWind + season, data = Deer))
 
+#全変数の相関を確認
+vif(lm(FID ~ cues + weather + cloud + flock + AvgWind + MaxWind + noise + log(light + 1) + moon + season, data = Deer))
+
 
 # 推定値の信頼区間を計算
 conf_intervals_Deer <- confint(Deer_model)
@@ -290,7 +293,7 @@ ggplot(results, aes(x = estimate, y = term)) +
                "log(light + 1)" = "light",
                "seasonNonBreeding" = "Season(non-breeding)")
   )
-
+AIC(Deer_model)
 
 #AD
 Deer_model_AD <- lmer(
