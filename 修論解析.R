@@ -215,7 +215,7 @@ library(ggplot2)
 # lmer()でGLMMを構築
 #現時点ではcoreのランダム効果がない方が説明しやすい結果
 Deer_model <- lmer(
-  FID ~ cues + log(light + 1) + noise + SD  + flock + MaxWind + season +
+  FID ~ cues + log(light + 1) + noise + SD  + flock + AvgWind + season +
     (1 | site_number_home),
   data = Deer
 )
@@ -434,3 +434,18 @@ ggplot() +
     x = "Longitude",
     y = "Latitude"
   )
+
+###
+#相関の図示
+# 数値データのみを抽出
+numeric_data <- Deer[sapply(Deer, is.numeric)]
+
+# 相関行列を計算
+cor_matrix <- cor(numeric_data, use = "complete.obs")
+print(cor_matrix)
+
+
+library(corrplot)
+
+# 相関行列のプロット
+corrplot(cor_matrix, method = "circle")
