@@ -473,7 +473,6 @@ grid <- st_make_grid(
   st_as_sf()  # sf オブジェクトに変換
 
 
-# プロット
 ggplot() +
   # 背景地図
   geom_polygon(
@@ -481,13 +480,6 @@ ggplot() +
     aes(x = long, y = lat, group = group),
     fill = "lightgray",
     color = "black"
-  ) +
-  # グリッド
-  geom_sf(
-    data = grid,
-    fill = NA,
-    color = "red",
-    linetype = "dotted"
   ) +
   # site_number のプロット
   geom_point(
@@ -501,10 +493,15 @@ ggplot() +
     aes(x = longitude, y = latitude, label = site_number_home),
     hjust = -0.2, vjust = -0.2, color = "blue"
   ) +
+  # 表示範囲の指定
+  coord_cartesian(
+    xlim = c(141.7, 142),
+    ylim = c(42.5, 42.8)
+  ) +
   # テーマとタイトル
   theme_minimal() +
   labs(
-    title = "Site Number Distribution with 10km² Grid",
+    title = "Site Number Distribution on the Map",
     x = "Longitude",
     y = "Latitude"
   )
