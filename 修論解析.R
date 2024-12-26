@@ -192,6 +192,55 @@ for (i in 1:nrow(Deer)) {
   }
 }
 
+library(sf)
+# Deerをsfオブジェクトに変換
+Deer_sf <- st_as_sf(Deer, coords = c("longitude", "latitude"), crs = 4326)
+Deer_utm <- st_transform(Deer_sf, crs = 32654)
+
+# Deerデータのバウンディングボックスを取得
+bbox <- st_bbox(Deer_utm)
+
+# 3200m x 3200mのグリッドを作成
+grid <- st_make_grid(
+  st_as_sfc(bbox), 
+  cellsize = c(3000, 3000), 
+  what = "polygons"
+) %>% st_as_sf()
+
+# グリッドにIDを付与
+grid <- grid %>% mutate(grid_id = row_number())
+
+# ポイントをグリッドに割り当て
+Deer_with_grid <- st_join(Deer_utm, grid)
+
+unique_sites <- unique(na.omit(Deer_with_grid$grid_id))
+Deer_with_grid$grid_id <- match(Deer_with_grid$grid_id, unique_sites)
+
+# グリッドIDを site_number_home に割り当て
+Deer <- Deer %>% mutate(site_number_home = Deer_with_grid$grid_id)
+Deer_with_grid <- Deer_with_grid %>% mutate(site_number_home = Deer_with_grid$grid_id)
+
+# 結果の確認
+print(Deer)
+
+# プロット
+ggplot() +
+  geom_sf(data = grid, fill = NA, color = "gray") + # グリッド
+  geom_sf(data = Deer_with_grid, aes(color = as.factor(site_number_home)), size = 3) + # ポイント
+  labs(color = "Site Number", title = "3200x3200m Grid Clustering") +
+  theme_minimal()
+
+
+
+
+
+
+
+
+
+
+
+
 # 重複を解消して連続した番号にする
 unique_sites <- unique(na.omit(Deer$site_number_core))
 Deer$site_number_core <- match(Deer$site_number_core, unique_sites)
@@ -223,8 +272,22 @@ Deer_model <- lmer(
 # 結果の確認
 summary(Deer_model)
 
+library(performance)
+
+# 決定係数の確認
+model_r2 <- r2_nakagawa(Deer_model)
+
+print(model_r2)
+
+# AICの確認
+AIC(Deer_model)
+null_model <- lmer(FID ~ (1 | site_number_home),
+                   data = Deer)
+AIC(null_model)
+
+
 library(car)
-vif(lm(FID ~ cues + log(light + 1) + flock + noise + SD + MaxWind + season, data = Deer))
+vif(lm(FID ~ cues + log(light + 1) + flock + noise + SD + AvgWind + season, data = Deer))
 
 #全変数の相関を確認
 vif(lm(FID ~ cues + weather + cloud + flock + AvgWind + MaxWind + noise + log(light + 1) + moon + season, data = Deer))
@@ -255,7 +318,7 @@ results <- na.omit(results)
 results <-  results %>%
   mutate(term = factor(term, levels = c(
     "seasonNonBreeding",
-    "MaxWind",
+    "AvgWind",
     "flock",
     "SD",
     "noise",
@@ -281,7 +344,7 @@ ggplot(results, aes(x = estimate, y = term)) +
        y = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
   coord_cartesian(xlim = c(-30, 50)) +
-  theme_classic() +
+  theme_bw(base_size = 20) +
   scale_y_discrete(
     labels = c("cueshuman_vi_ac" = "Human(both)",
                "cueshuman_vi_ac_dog_vi" = "Human(both) & Dog(visual)",
@@ -297,7 +360,7 @@ AIC(Deer_model)
 
 #AD
 Deer_model_AD <- lmer(
-  AD ~ cues + log(light + 1) +  flock + noise + SD + MaxWind + season +
+  AD ~ cues + log(light + 1) +  flock + noise + SD + AvgWind + season +
     (1 | site_number_home),
   data = Deer
 )
@@ -326,7 +389,23 @@ results_AD <- na.omit(results_AD)
 
 # 推定値と信頼区間のプロット
 # termを因子型にして逆順に設定
-results_AD$term <- factor(results_AD$term, levels = rev(unique(results_AD$term)))
+results_AD <-  results_AD %>%
+  mutate(term = factor(term, levels = c(
+    "seasonNonBreeding",
+    "AvgWind",
+    "flock",
+    "SD",
+    "noise",
+    "log(light + 1)",
+    "cueshuman_vi_no_dog_vi",
+    "cueshuman_vi_dog_vi_ac",
+    "cueshuman_vi_ac_dog_vi",
+    "cueshuman_vi_dog_ac",
+    "cueshuman_vi_dog_vi",
+    "cueshuman_vi_no",
+    "cueshuman_vi_ac",
+    "(Intercept)"
+  )))
 
 ggplot(results_AD, aes(x = estimate_AD, y = term)) +
   geom_point(size = 3) +  # 推定値の点
@@ -336,8 +415,8 @@ ggplot(results_AD, aes(x = estimate_AD, y = term)) +
        x = "Predictor Variables",
        y = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-40, 50)) +
-  theme_classic() +
+  coord_cartesian(xlim = c(-40, 45)) +
+  theme_bw(base_size = 20) +
   scale_y_discrete(
     labels = c("cueshuman_vi_ac" = "Human(both)",
                "cueshuman_vi_ac_dog_vi" = "Human(both) & Dog(visual)",
@@ -395,6 +474,32 @@ ggplot(data = Deer, aes(x = cues, y = site_number)) +
   geom_boxplot(outliers = FALSE) +
   geom_jitter()
 
+ggplot(data = Deer, aes(x = season, y = FID)) +
+  geom_boxplot(outliers = FALSE) +
+  geom_jitter()
+
+
+#相関をプロット
+ggplot(data = Deer, aes(x = light, y = FID)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  theme_bw()
+
+ggplot(data = Deer, aes(x = noise, y = FID)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  theme_bw()
+
+ggplot(data = Deer, aes(x = flock, y = FID)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  theme_bw()
+
+ggplot(data = Deer, aes(x = AvgWind, y = FID)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  theme_bw()
+
 
 library(sf) # 地理データの操作用
 library(maps)
@@ -402,6 +507,22 @@ library(maps)
 # 日本地図の取得
 japan_map <- map_data("world", region = "Japan")
 
+# 日本地図のバウンディングボックス作成
+bbox <- st_bbox(c(xmin = 141.7, ymin = 42.5, xmax = 142.0, ymax = 42.8), crs = st_crs(4326))
+
+# バウンディングボックスを sf オブジェクトに変換
+bbox_sf <- st_as_sfc(bbox)
+
+# 10km² のグリッド作成
+grid <- st_make_grid(
+  bbox_sf,
+  cellsize = c(0.032, 0.044),  # 緯度・経度での10kmに相当する値（約0.1度）
+  what = "polygons"
+) %>%
+  st_as_sf()  # sf オブジェクトに変換
+
+
+# プロット
 ggplot() +
   # 背景地図
   geom_polygon(
@@ -409,6 +530,13 @@ ggplot() +
     aes(x = long, y = lat, group = group),
     fill = "lightgray",
     color = "black"
+  ) +
+  # グリッド
+  geom_sf(
+    data = grid,
+    fill = NA,
+    color = "red",
+    linetype = "dotted"
   ) +
   # site_number のプロット
   geom_point(
@@ -419,18 +547,13 @@ ggplot() +
   # ラベルの追加
   geom_text(
     data = Deer,
-    aes(x = longitude, y = latitude, label = seasonal_site_number),
+    aes(x = longitude, y = latitude, label = site_number_home),
     hjust = -0.2, vjust = -0.2, color = "blue"
-  ) +
-  # 表示範囲の指定
-  coord_cartesian(
-    xlim = c(141.7, 142),
-    ylim = c(42.5, 42.8)
   ) +
   # テーマとタイトル
   theme_minimal() +
   labs(
-    title = "Site Number Distribution",
+    title = "Site Number Distribution with 10km² Grid",
     x = "Longitude",
     y = "Latitude"
   )
@@ -449,3 +572,57 @@ library(corrplot)
 
 # 相関行列のプロット
 corrplot(cor_matrix, method = "circle")
+
+# 必要なパッケージをロード
+library(dplyr)
+library(ggcorrplot)
+
+# 必要なパッケージをロード
+library(dplyr)
+library(ggcorrplot)
+
+# データの確認
+str(Deer)
+
+# カテゴリ変数のOne-hotエンコーディング
+cues_dummy <- model.matrix(~ cues - 1, data = Deer)
+weather_dummy <- model.matrix(~ weather - 1, data = Deer)
+day_or_night_dummy <- model.matrix(~ day_or_night - 1, data = Deer)
+season_dummy <- model.matrix(~ season - 1, data = Deer)
+
+# 対象列の選択と結合
+continuous_columns <- Deer %>% 
+  select(cloud, flock, FID, AD, SD, AvgWind, MaxWind, noise, light, moon)
+
+# 連続変数とエンコードされたカテゴリ変数を結合
+combined_data <- cbind(continuous_columns, cues_dummy, weather_dummy, day_or_night_dummy, season_dummy)
+
+# 相関行列の計算
+correlation_matrix <- cor(combined_data, use = "pairwise.complete.obs")
+
+# 相関行列の可視化
+ggcorrplot(correlation_matrix, lab = TRUE, lab_size = 3, title = "Correlation Matrix")
+
+# 必要なパッケージを読み込み
+library(sf)
+save_dir <- "c:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ" # フォルダパスを設定
+
+# 元のデータフレームをコピーして新しいオブジェクトに
+Deer_sf <- Deer
+
+# FIDという列が存在するか確認
+if ("FID" %in% names(Deer_sf)) {
+  names(Deer_sf)[names(Deer_sf) == "FID"] <- "original_FID"
+}
+
+Deer_sf <- st_as_sf(Deer_sf, coords = c("longitude", "latitude"), crs = 4326)
+
+# 既存のGeoPackageファイルを削除
+if (file.exists("Deer.gpkg")) {
+  unlink("Deer.gpkg")
+}
+
+save_path <- file.path(save_dir, "Deer.gpkg")
+
+# GeoPackage形式で保存
+st_write(Deer_sf, save_path, layer = "Deer_layer", delete_dsn = TRUE)
