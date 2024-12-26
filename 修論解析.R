@@ -192,55 +192,6 @@ for (i in 1:nrow(Deer)) {
   }
 }
 
-library(sf)
-# Deerをsfオブジェクトに変換
-Deer_sf <- st_as_sf(Deer, coords = c("longitude", "latitude"), crs = 4326)
-Deer_utm <- st_transform(Deer_sf, crs = 32654)
-
-# Deerデータのバウンディングボックスを取得
-bbox <- st_bbox(Deer_utm)
-
-# 3200m x 3200mのグリッドを作成
-grid <- st_make_grid(
-  st_as_sfc(bbox), 
-  cellsize = c(3000, 3000), 
-  what = "polygons"
-) %>% st_as_sf()
-
-# グリッドにIDを付与
-grid <- grid %>% mutate(grid_id = row_number())
-
-# ポイントをグリッドに割り当て
-Deer_with_grid <- st_join(Deer_utm, grid)
-
-unique_sites <- unique(na.omit(Deer_with_grid$grid_id))
-Deer_with_grid$grid_id <- match(Deer_with_grid$grid_id, unique_sites)
-
-# グリッドIDを site_number_home に割り当て
-Deer <- Deer %>% mutate(site_number_home = Deer_with_grid$grid_id)
-Deer_with_grid <- Deer_with_grid %>% mutate(site_number_home = Deer_with_grid$grid_id)
-
-# 結果の確認
-print(Deer)
-
-# プロット
-ggplot() +
-  geom_sf(data = grid, fill = NA, color = "gray") + # グリッド
-  geom_sf(data = Deer_with_grid, aes(color = as.factor(site_number_home)), size = 3) + # ポイント
-  labs(color = "Site Number", title = "3200x3200m Grid Clustering") +
-  theme_minimal()
-
-
-
-
-
-
-
-
-
-
-
-
 # 重複を解消して連続した番号にする
 unique_sites <- unique(na.omit(Deer$site_number_core))
 Deer$site_number_core <- match(Deer$site_number_core, unique_sites)
