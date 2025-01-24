@@ -98,12 +98,12 @@ library(geosphere)
 # 新しい列 "site_number" を追加し、初期値をNAに設定
 merged_data$site_number <- NA
 
-# 半径200m以内の座標に番号を付与
+# 半径150m以内の座標に番号を付与
 for (i in 1:nrow(merged_data)) {
   current_coords <- c(merged_data$longitude[i], merged_data$latitude[i])
   distances <- distHaversine(current_coords, 
                              cbind(merged_data$longitude, merged_data$latitude))
-  within_radius <- which(distances <= 200)
+  within_radius <- which(distances <= 150)
   merged_data$site_number[within_radius] <- i
 }
 
