@@ -98,12 +98,12 @@ library(geosphere)
 # 新しい列 "site_number" を追加し、初期値をNAに設定
 merged_data$site_number <- NA
 
-# 半径150m以内の座標に番号を付与
+# 半径200m以内の座標に番号を付与
 for (i in 1:nrow(merged_data)) {
   current_coords <- c(merged_data$longitude[i], merged_data$latitude[i])
   distances <- distHaversine(current_coords, 
                              cbind(merged_data$longitude, merged_data$latitude))
-  within_radius <- which(distances <= 150)
+  within_radius <- which(distances <= 200)
   merged_data$site_number[within_radius] <- i
 }
 
@@ -152,45 +152,12 @@ Deer <- subset(merged_data, species == "Deer")
 
 ###
 #行動圏にあわせて番号を設定
-#冬半径1800m、夏半径1100m
-#コアエリアは冬700m、夏400m
-#Laneng et al. 2023を参照
 
 library(geosphere) 
 
 # サイト番号列
 Deer$site_number_core <- NA
 Deer$site_number_home <- NA
-
-# コアエリア最大半径（700m）でクラスタリング
-for (i in 1:nrow(Deer)) {
-  # 現在の座標
-  Deer_coords <- c(Deer$longitude[i], Deer$latitude[i])
-  
-  # 距離計算（700m以内）
-  Deer_distances <- distHaversine(Deer_coords, cbind(Deer$longitude, Deer$latitude))
-  Deer_within_radius <- which(Deer_distances <= 700)
-  
-  # サイト番号を割り当て
-  if (is.na(Deer$site_number_core[i])) {
-    Deer$site_number_core[Deer_within_radius] <- i
-  }
-}
-
-# ホームレンジ最大半径（1800m）でクラスタリング
-for (i in 1:nrow(Deer)) {
-  # 現在の座標
-  Deer_coords <- c(Deer$longitude[i], Deer$latitude[i])
-  
-  # 距離計算（1800m以内）
-  Deer_distances <- distHaversine(Deer_coords, cbind(Deer$longitude, Deer$latitude))
-  Deer_within_radius <- which(Deer_distances <= 1800)
-  
-  # サイト番号を割り当て
-  if (is.na(Deer$site_number_home[i])) {
-    Deer$site_number_home[Deer_within_radius] <- i
-  }
-}
 
 library(sf)
 # Deerをsfオブジェクトに変換
@@ -200,10 +167,10 @@ Deer_utm <- st_transform(Deer_sf, crs = 32654)
 # Deerデータのバウンディングボックスを取得
 bbox <- st_bbox(Deer_utm)
 
-# 3200m x 3200mのグリッドを作成
+# 5000m x 5000mのグリッドを作成
 grid <- st_make_grid(
   st_as_sfc(bbox), 
-  cellsize = c(3000, 3000), 
+  cellsize = c(5000, 5000), 
   what = "polygons"
 ) %>% st_as_sf()
 
@@ -227,38 +194,19 @@ print(Deer)
 ggplot() +
   geom_sf(data = grid, fill = NA, color = "gray") + # グリッド
   geom_sf(data = Deer_with_grid, aes(color = as.factor(site_number_home)), size = 3) + # ポイント
-  labs(color = "Site Number", title = "3200x3200m Grid Clustering") +
+  labs(color = "Site Number", title = "5000x5000m Grid Clustering") +
   theme_minimal()
 
 
-
-
-
-
-
-
-
-
-
-
-# 重複を解消して連続した番号にする
-unique_sites <- unique(na.omit(Deer$site_number_core))
-Deer$site_number_core <- match(Deer$site_number_core, unique_sites)
-
-unique_sites <- unique(na.omit(Deer$site_number_home))
-Deer$site_number_home <- match(Deer$site_number_home, unique_sites)
-
-ggplot(Deer, aes(x = site_number_core, fill = cues))+
-  geom_bar(stat = "count")
-
-ggplot(Deer, aes(x = site_number_home, fill = cues))+
-  geom_bar(stat = "count")
 
 ###
 #GLMM
 library(lme4)
 library(Matrix)
 library(ggplot2)
+
+Deer <- subset(Deer, FID <= 150)
+
 
 #シカ
 # lmer()でGLMMを構築
@@ -356,7 +304,7 @@ ggplot(results, aes(x = estimate, y = term)) +
                "log(light + 1)" = "light",
                "seasonNonBreeding" = "Season(non-breeding)")
   )
-AIC(Deer_model)
+
 
 #AD
 Deer_model_AD <- lmer(
@@ -367,6 +315,17 @@ Deer_model_AD <- lmer(
 
 # 結果の確認
 summary(Deer_model_AD)
+
+# 決定係数の確認
+model_AD_r2 <- r2_nakagawa(Deer_model_AD)
+
+print(model_AD_r2)
+
+# AICの確認
+AIC(Deer_model_AD)
+null_model_AD <- lmer(AD ~ (1 | site_number_home),
+                   data = Deer)
+AIC(null_model_AD)
 
 # 推定値の信頼区間を計算
 conf_intervals_Deer_AD <- confint(Deer_model_AD)
