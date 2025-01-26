@@ -585,3 +585,28 @@ save_path <- file.path(save_dir, "Deer.gpkg")
 
 # GeoPackage形式で保存
 st_write(Deer_sf, save_path, layer = "Deer_layer", delete_dsn = TRUE)
+
+
+###
+# 予想結果図の作成
+ggplot(results_AD, aes(x = estimate_AD, y = term)) +
+  geom_point(size = 3) +  # 推定値の点
+  scale_y_discrete() +
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
+  labs(title = "Alart Distance",
+       x = "Predictor Variables",
+       y = "Estimated Values") +
+  geom_vline(xintercept = 0, linetype = "dotted") +
+  coord_cartesian(xlim = c(-40, 45)) +
+  theme_bw(base_size = 20) +
+  scale_y_discrete(
+    labels = c("cueshuman_vi_ac" = "Human(both)",
+               "cueshuman_vi_ac_dog_vi" = "Human(both) & Dog(visual)",
+               "cueshuman_vi_dog_ac" = "Human(visual) & Dog(acoustic)",
+               "cueshuman_vi_dog_vi" = "Human(visual) & Dog(visual)",
+               "cueshuman_vi_dog_vi_ac" = "Human(visual) & Dog(both)",
+               "cueshuman_vi_no" = "Human(visual) & Whitenoise",
+               "cueshuman_vi_no_dog_vi" = "Human(visual) & Dog(visual) & Whitenoise",
+               "log(light + 1)" = "light",
+               "seasonNonBreeding" = "Season(non-breeding)")
+  )
