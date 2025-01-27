@@ -240,70 +240,48 @@ vif(lm(FID ~ cues + log(light + 1) + flock + noise + SD + AvgWind + season, data
 #全変数の相関を確認
 vif(lm(FID ~ cues + weather + cloud + flock + AvgWind + MaxWind + noise + log(light + 1) + moon + season, data = Deer))
 
+# emmeans
+library(emmeans)
 
-# 推定値の信頼区間を計算
-conf_intervals_Deer <- confint(Deer_model)
-# 不必要な行を除外
-conf_intervals_Deer <- conf_intervals_Deer[!rownames(conf_intervals_Deer) %in% c(".sig01", ".sig02",  ".sigma"), ]
+# 多重比較
+emmeans_FID <- emmeans(Deer_model, pairwise ~ cues)
+summary(emmeans_FID)
+plot(emmeans_FID)
+pwpp(emmeans_FID, sort = FALSE)
 
-# 推定値を取得
-estimates <- summary(Deer_model)$coefficients
+library(multcompView)
+library(multcomp)
+cld_result_FID <- cld(emmeans_FID)
+print(cld_result_FID)
 
-# データフレームに変換
-results <- data.frame(
-  term = rownames(estimates),
-  estimate = estimates[, "Estimate"],
-  lwr = conf_intervals_Deer[, 1],
-  upr = conf_intervals_Deer[, 2]
-)
+library(dplyr)
+# グループ名を数字からアルファベットに置き換え
+cld_result_FID <- cld_result_FID %>%
+  mutate(.group = case_when(
+    .group == " 1 " ~ "a",      
+    .group == "  2" ~ "b",       
+    .group == " 12" ~ "ab"
+  ))
+print(cld_result_FID)
 
+# 推定値の大きい順に並べ替える
+cld_result_FID <- cld_result_FID[order(-cld_result_FID$emmean), ]
+cld_result_FID$cues <- factor(cld_result_FID$cues, levels = cld_result_FID$cues)
 
-# NAの行を削除
-results <- na.omit(results)
+library(ggplot2)
+# プロット作成
+ggplot(cld_result_FID, aes(x = cues, y = emmean)) +
+  geom_point(size = 2) +                                # 平均値の点
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2) + # エラーバー
+  geom_text(aes(label = .group), hjust = -0.5, size = 5) +  # グループラベルを追加
+  labs(
+    x = "Cues", 
+    y = "Estimated Means", 
+    title = "Estimated FID Means"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # x軸ラベルを45度傾ける
 
-# 推定値と信頼区間のプロット
-# termを因子型にして逆順に設定
-results <-  results %>%
-  mutate(term = factor(term, levels = c(
-    "seasonNonBreeding",
-    "AvgWind",
-    "flock",
-    "SD",
-    "noise",
-    "log(light + 1)",
-    "cueshuman_vi_no_dog_vi",
-    "cueshuman_vi_dog_vi_ac",
-    "cueshuman_vi_ac_dog_vi",
-    "cueshuman_vi_dog_ac",
-    "cueshuman_vi_dog_vi",
-    "cueshuman_vi_no",
-    "cueshuman_vi_ac",
-    "(Intercept)"
-  )))
-
-
-
-ggplot(results, aes(x = estimate, y = term)) +
-  geom_point(size = 3) +  # 推定値の点
-  scale_y_discrete() +
-  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
-  labs(title = "Flight Initiation Distance",
-       x = "Predictor Variables",
-       y = "Estimated Values") +
-  geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-30, 50)) +
-  theme_bw(base_size = 20) +
-  scale_y_discrete(
-    labels = c("cueshuman_vi_ac" = "Human(both)",
-               "cueshuman_vi_ac_dog_vi" = "Human(both) & Dog(visual)",
-               "cueshuman_vi_dog_ac" = "Human(visual) & Dog(acoustic)",
-               "cueshuman_vi_dog_vi" = "Human(visual) & Dog(visual)",
-               "cueshuman_vi_dog_vi_ac" = "Human(visual) & Dog(both)",
-               "cueshuman_vi_no" = "Human(visual) & Whitenoise",
-               "cueshuman_vi_no_dog_vi" = "Human(visual) & Dog(visual) & Whitenoise",
-               "log(light + 1)" = "light",
-               "seasonNonBreeding" = "Season(non-breeding)")
-  )
 
 
 #AD
@@ -327,66 +305,46 @@ null_model_AD <- lmer(AD ~ (1 | site_number_home),
                    data = Deer)
 AIC(null_model_AD)
 
-# 推定値の信頼区間を計算
-conf_intervals_Deer_AD <- confint(Deer_model_AD)
-# 不必要な行を除外
-conf_intervals_Deer_AD <- conf_intervals_Deer_AD[!rownames(conf_intervals_Deer_AD) %in% c(".sig01", ".sig02",  ".sigma"), ]
+# emmeans
+library(emmeans)
 
-# 推定値を取得
-estimates_AD <- summary(Deer_model_AD)$coefficients
+# 多重比較
+emmeans_AD <- emmeans(Deer_model_AD, pairwise ~ cues)
+summary(emmeans_AD)
+plot(emmeans_AD)
+pwpp(emmeans_AD, sort = FALSE)
 
-# データフレームに変換
-results_AD <- data.frame(
-  term = rownames(estimates_AD),
-  estimate_AD = estimates_AD[, "Estimate"],
-  lwr = conf_intervals_Deer_AD[, 1],
-  upr = conf_intervals_Deer_AD[, 2]
-)
+library(multcompView)
+library(multcomp)
+cld_result_AD <- cld(emmeans_AD)
+print(cld_result_AD)
 
-# NAの行を削除
-results_AD <- na.omit(results_AD)
+# グループ名を数字からアルファベットに置き換え
+cld_result_AD <- cld_result_AD %>%
+  mutate(.group = case_when(
+    .group == " 1 " ~ "a",      
+    .group == "  2" ~ "b",       
+    .group == " 12" ~ "ab"
+  ))
+print(cld_result_AD)
 
-# 推定値と信頼区間のプロット
-# termを因子型にして逆順に設定
-results_AD <-  results_AD %>%
-  mutate(term = factor(term, levels = c(
-    "seasonNonBreeding",
-    "AvgWind",
-    "flock",
-    "SD",
-    "noise",
-    "log(light + 1)",
-    "cueshuman_vi_no_dog_vi",
-    "cueshuman_vi_dog_vi_ac",
-    "cueshuman_vi_ac_dog_vi",
-    "cueshuman_vi_dog_ac",
-    "cueshuman_vi_dog_vi",
-    "cueshuman_vi_no",
-    "cueshuman_vi_ac",
-    "(Intercept)"
-  )))
+# 推定値の大きい順に並べ替える
+cld_result_AD <- cld_result_AD[order(-cld_result_AD$emmean), ]
+cld_result_AD$cues <- factor(cld_result_AD$cues, levels = cld_result_AD$cues)
 
-ggplot(results_AD, aes(x = estimate_AD, y = term)) +
-  geom_point(size = 3) +  # 推定値の点
-  scale_y_discrete() +
-  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
-  labs(title = "Alart Distance",
-       x = "Predictor Variables",
-       y = "Estimated Values") +
-  geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-40, 45)) +
-  theme_bw(base_size = 20) +
-  scale_y_discrete(
-    labels = c("cueshuman_vi_ac" = "Human(both)",
-               "cueshuman_vi_ac_dog_vi" = "Human(both) & Dog(visual)",
-               "cueshuman_vi_dog_ac" = "Human(visual) & Dog(acoustic)",
-               "cueshuman_vi_dog_vi" = "Human(visual) & Dog(visual)",
-               "cueshuman_vi_dog_vi_ac" = "Human(visual) & Dog(both)",
-               "cueshuman_vi_no" = "Human(visual) & Whitenoise",
-               "cueshuman_vi_no_dog_vi" = "Human(visual) & Dog(visual) & Whitenoise",
-               "log(light + 1)" = "light",
-               "seasonNonBreeding" = "Season(non-breeding)")
-  )
+library(ggplot2)
+# プロット作成
+ggplot(cld_result_AD, aes(x = cues, y = emmean)) +
+  geom_point(size = 2) +                                # 平均値の点
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2) + # エラーバー
+  geom_text(aes(label = .group), hjust = -0.5, size = 5) +  # グループラベルを追加
+  labs(
+    x = "Cues", 
+    y = "Estimated Means", 
+    title = "Estimated AD Means"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # x軸ラベルを45度傾ける
 
 
 
@@ -589,24 +547,30 @@ st_write(Deer_sf, save_path, layer = "Deer_layer", delete_dsn = TRUE)
 
 ###
 # 予想結果図の作成
-ggplot(results_AD, aes(x = estimate_AD, y = term)) +
-  geom_point(size = 3) +  # 推定値の点
-  scale_y_discrete() +
-  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
-  labs(title = "Alart Distance",
-       x = "Predictor Variables",
-       y = "Estimated Values") +
-  geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-40, 45)) +
-  theme_bw(base_size = 20) +
-  scale_y_discrete(
-    labels = c("cueshuman_vi_ac" = "Human(both)",
-               "cueshuman_vi_ac_dog_vi" = "Human(both) & Dog(visual)",
-               "cueshuman_vi_dog_ac" = "Human(visual) & Dog(acoustic)",
-               "cueshuman_vi_dog_vi" = "Human(visual) & Dog(visual)",
-               "cueshuman_vi_dog_vi_ac" = "Human(visual) & Dog(both)",
-               "cueshuman_vi_no" = "Human(visual) & Whitenoise",
-               "cueshuman_vi_no_dog_vi" = "Human(visual) & Dog(visual) & Whitenoise",
-               "log(light + 1)" = "light",
-               "seasonNonBreeding" = "Season(non-breeding)")
+
+# データフレームを作成
+# 推定値と信頼区間の値を手動で設定します
+data <- data.frame(
+  Pattern = c("Pattern3", "Pattern2", "Pattern1"),
+  Estimate = c(80, 70, 60),
+  LowerCI = c(76, 64, 54),
+  UpperCI = c(84, 78, 68),
+  Group = c("b", "ab", "a")
+)
+
+# ggplot2ライブラリを読み込み
+library(ggplot2)
+
+# プロットを作成
+ggplot(data, aes(y = Estimate, x = Pattern, ymin = LowerCI, ymax = UpperCI)) +
+  geom_pointrange(size = 1) + # 推定値と信頼区間を描画
+  geom_text(aes(label = Group), hjust = -1, size = 5) + # グループ記号を推定値の真下に表示
+  theme_bw(base_size = 16) +
+  labs(
+    title = "Predicting results",
+    y = "Estimate",
+    x = NULL
+  ) +
+  theme(
+    legend.position = "none" 
   )
