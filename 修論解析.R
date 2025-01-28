@@ -212,7 +212,7 @@ Deer <- subset(Deer, FID <= 150)
 # lmer()でGLMMを構築
 #現時点ではcoreのランダム効果がない方が説明しやすい結果
 Deer_model <- lmer(
-  FID ~ cues + log(light + 1) + noise + SD  + flock + AvgWind + season +
+  FID ~ cues + log(light + 1) + noise + SD  + flock + AvgWind + season + -1 +
     (1 | site_number_home),
   data = Deer
 )
@@ -282,11 +282,65 @@ ggplot(cld_result_FID, aes(x = cues, y = emmean)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  # x軸ラベルを45度傾ける
 
+# 推定値の信頼区間を計算
+conf_intervals_Deer <- confint(Deer_model)
+# 不必要な行を除外
+conf_intervals_Deer <- conf_intervals_Deer[!rownames(conf_intervals_Deer) %in% c(".sig01", ".sig02",  ".sigma"), ]
+
+# 推定値を取得
+estimates <- summary(Deer_model)$coefficients
+
+# データフレームに変換
+results <- data.frame(
+  term = rownames(estimates),
+  estimate = estimates[, "Estimate"],
+  lwr = conf_intervals_Deer[, 1],
+  upr = conf_intervals_Deer[, 2]
+)
+
+
+# NAの行を削除
+results <- na.omit(results)
+
+# cuesに関する行を除外
+results <- results %>%
+  filter(!grepl("cues", term))
+
+# 推定値と信頼区間のプロット
+# termを因子型にして逆順に設定
+results <-  results %>%
+  mutate(term = factor(term, levels = c(
+    "seasonNonBreeding",
+    "AvgWind",
+    "flock",
+    "SD",
+    "noise",
+    "log(light + 1)",
+    "(Intercept)"
+  )))
+
+
+
+ggplot(results, aes(x = estimate, y = term)) +
+  geom_point(size = 3) +  # 推定値の点
+  scale_y_discrete() +
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
+  labs(title = "Flight Initiation Distance",
+       x = "Predictor Variables",
+       y = "Estimated Values") +
+  geom_vline(xintercept = 0, linetype = "dotted") +
+  coord_cartesian(xlim = c(-5, 5)) +
+  theme_bw(base_size = 20) +
+  scale_y_discrete(
+    labels = c("log(light + 1)" = "light",
+               "seasonNonBreeding" = "Season(non-breeding)")
+  )
+
 
 
 #AD
 Deer_model_AD <- lmer(
-  AD ~ cues + log(light + 1) +  flock + noise + SD + AvgWind + season +
+  AD ~ cues + log(light + 1) +  flock + noise + SD + AvgWind + season +　-1 +
     (1 | site_number_home),
   data = Deer
 )
@@ -346,6 +400,61 @@ ggplot(cld_result_AD, aes(x = cues, y = emmean)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  # x軸ラベルを45度傾ける
 
+
+
+###
+# 推定値の信頼区間を計算
+conf_intervals_Deer_AD <- confint(Deer_model_AD)
+# 不必要な行を除外
+conf_intervals_Deer_AD <- conf_intervals_Deer_AD[!rownames(conf_intervals_Deer_AD) %in% c(".sig01", ".sig02",  ".sigma"), ]
+
+# 推定値を取得
+estimates_AD <- summary(Deer_model_AD)$coefficients
+
+# データフレームに変換
+results_AD <- data.frame(
+  term = rownames(estimates_AD),
+  estimate = estimates_AD[, "Estimate"],
+  lwr = conf_intervals_Deer_AD[, 1],
+  upr = conf_intervals_Deer_AD[, 2]
+)
+
+
+# NAの行を削除
+results_AD <- na.omit(results_AD)
+
+# cuesに関する行を除外
+results_AD <- results_AD %>%
+  filter(!grepl("cues", term))
+
+# 推定値と信頼区間のプロット
+# termを因子型にして逆順に設定
+results_AD <-  results_AD %>%
+  mutate(term = factor(term, levels = c(
+    "seasonNonBreeding",
+    "AvgWind",
+    "flock",
+    "SD",
+    "noise",
+    "log(light + 1)"
+  )))
+
+
+
+ggplot(results_AD, aes(x = estimate, y = term)) +
+  geom_point(size = 3) +  # 推定値の点
+  scale_y_discrete() +
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
+  labs(title = "Alart Distance",
+       x = "Predictor Variables",
+       y = "Estimated Values") +
+  geom_vline(xintercept = 0, linetype = "dotted") +
+  coord_cartesian(xlim = c(-5, 5)) +
+  theme_bw(base_size = 20) +
+  scale_y_discrete(
+    labels = c("log(light + 1)" = "light",
+               "seasonNonBreeding" = "Season(non-breeding)")
+  )
 
 
 
