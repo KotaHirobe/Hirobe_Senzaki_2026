@@ -264,22 +264,19 @@ cld_result_FID <- cld_result_FID %>%
   ))
 print(cld_result_FID)
 
-# 推定値の大きい順に並べ替える
-cld_result_FID <- cld_result_FID[order(-cld_result_FID$emmean), ]
-cld_result_FID$cues <- factor(cld_result_FID$cues, levels = cld_result_FID$cues)
 
 library(ggplot2)
 # プロット作成
 ggplot(cld_result_FID, aes(x = cues, y = emmean)) +
-  geom_point(size = 2) +                                # 平均値の点
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2) + # エラーバー
-  geom_text(aes(label = .group), hjust = -0.5, size = 5) +  # グループラベルを追加
+  geom_point(size = 8) +                                # 平均値の点
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.3, linewidth = 2.5) + 
+  geom_text(aes(label = .group), hjust = -1, size = 7) +  # グループラベルを追加
   labs(
     x = "Cues", 
     y = "Estimated Means", 
     title = "Estimated FID Means"
   ) +
-  theme_bw() +
+  theme_classic(base_size = 22) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  # x軸ラベルを45度傾ける
 
 # 推定値の信頼区間を計算
@@ -306,35 +303,24 @@ results <- na.omit(results)
 results <- results %>%
   filter(!grepl("cues", term))
 
-# 推定値と信頼区間のプロット
-# termを因子型にして逆順に設定
-results <-  results %>%
-  mutate(term = factor(term, levels = c(
-    "seasonNonBreeding",
-    "AvgWind",
-    "flock",
-    "SD",
-    "noise",
-    "log(light + 1)",
-    "(Intercept)"
-  )))
 
+results <- results %>%
+  mutate(color = ifelse(lwr > 0, "orange", "black"))
 
-
-ggplot(results, aes(x = estimate, y = term)) +
-  geom_point(size = 3) +  # 推定値の点
-  scale_y_discrete() +
-  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
+ggplot(results, aes(x = estimate, y = term, color = color)) +
+  geom_point(size = 5) +  
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  
   labs(title = "Flight Initiation Distance",
-       x = "Predictor Variables",
-       y = "Estimated Values") +
+       y = "Predictor Variables",
+       x = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-5, 5)) +
-  theme_bw(base_size = 20) +
+  coord_cartesian(xlim = c(-7, 17)) +
+  theme_classic(base_size = 22) +
   scale_y_discrete(
     labels = c("log(light + 1)" = "light",
-               "seasonNonBreeding" = "Season(non-breeding)")
-  )
+               "seasonNonBreeding" = "Season(non-mating)")
+  ) +
+  scale_color_identity()
 
 
 
@@ -382,22 +368,19 @@ cld_result_AD <- cld_result_AD %>%
   ))
 print(cld_result_AD)
 
-# 推定値の大きい順に並べ替える
-cld_result_AD <- cld_result_AD[order(-cld_result_AD$emmean), ]
-cld_result_AD$cues <- factor(cld_result_AD$cues, levels = cld_result_AD$cues)
 
 library(ggplot2)
 # プロット作成
 ggplot(cld_result_AD, aes(x = cues, y = emmean)) +
-  geom_point(size = 2) +                                # 平均値の点
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2) + # エラーバー
-  geom_text(aes(label = .group), hjust = -0.5, size = 5) +  # グループラベルを追加
+  geom_point(size = 8) +                                # 平均値の点
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.3, linewidth = 2.5) + # エラーバー
+  geom_text(aes(label = .group), hjust = -1, size = 7) +  # グループラベルを追加
   labs(
     x = "Cues", 
     y = "Estimated Means", 
     title = "Estimated AD Means"
   ) +
-  theme_bw() +
+  theme_classic(base_size = 22) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  # x軸ラベルを45度傾ける
 
 
@@ -427,34 +410,24 @@ results_AD <- na.omit(results_AD)
 results_AD <- results_AD %>%
   filter(!grepl("cues", term))
 
-# 推定値と信頼区間のプロット
-# termを因子型にして逆順に設定
-results_AD <-  results_AD %>%
-  mutate(term = factor(term, levels = c(
-    "seasonNonBreeding",
-    "AvgWind",
-    "flock",
-    "SD",
-    "noise",
-    "log(light + 1)"
-  )))
+results_AD <- results_AD %>%
+  mutate(color = ifelse(lwr > 0, "orange", "black"))
 
 
-
-ggplot(results_AD, aes(x = estimate, y = term)) +
-  geom_point(size = 3) +  # 推定値の点
-  scale_y_discrete() +
-  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
+ggplot(results_AD, aes(x = estimate, y = term, color = color)) +
+  geom_point(size = 5) +  
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  # 信頼区間
   labs(title = "Alart Distance",
-       x = "Predictor Variables",
-       y = "Estimated Values") +
+       y = "Predictor Variables",
+       x = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-5, 5)) +
-  theme_bw(base_size = 20) +
+  coord_cartesian(xlim = c(-8, 18)) +
+  theme_classic(base_size = 22) +
   scale_y_discrete(
     labels = c("log(light + 1)" = "light",
-               "seasonNonBreeding" = "Season(non-breeding)")
-  )
+               "seasonNonBreeding" = "Season(non-mating)")
+  ) +
+  scale_color_identity()
 
 
 
