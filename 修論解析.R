@@ -17,7 +17,7 @@ long_data <- Soundlevel %>%
 ggplot(long_data, aes(x = dist, y = value, color = variable, group = variable)) +
   geom_line() +
   labs(title = "Sound Levels Over Distance", x = "Distance(m)", y = "Sound Level(dBA)") +
-  theme_bw(base_size = 11)
+  theme_classic(base_size = 22)
 
 
 
@@ -152,9 +152,6 @@ Deer <- subset(merged_data, species == "Deer")
 
 ###
 #行動圏にあわせて番号を設定
-#冬半径1800m、夏半径1100m
-#コアエリアは冬700m、夏400m
-#Laneng et al. 2023を参照
 
 library(geosphere) 
 
@@ -162,48 +159,44 @@ library(geosphere)
 Deer$site_number_core <- NA
 Deer$site_number_home <- NA
 
-# コアエリア最大半径（700m）でクラスタリング
-for (i in 1:nrow(Deer)) {
-  # 現在の座標
-  Deer_coords <- c(Deer$longitude[i], Deer$latitude[i])
-  
-  # 距離計算（700m以内）
-  Deer_distances <- distHaversine(Deer_coords, cbind(Deer$longitude, Deer$latitude))
-  Deer_within_radius <- which(Deer_distances <= 700)
-  
-  # サイト番号を割り当て
-  if (is.na(Deer$site_number_core[i])) {
-    Deer$site_number_core[Deer_within_radius] <- i
-  }
-}
+library(sf)
+# Deerをsfオブジェクトに変換
+Deer_sf <- st_as_sf(Deer, coords = c("longitude", "latitude"), crs = 4326)
+Deer_utm <- st_transform(Deer_sf, crs = 32654)
 
-# ホームレンジ最大半径（1800m）でクラスタリング
-for (i in 1:nrow(Deer)) {
-  # 現在の座標
-  Deer_coords <- c(Deer$longitude[i], Deer$latitude[i])
-  
-  # 距離計算（1800m以内）
-  Deer_distances <- distHaversine(Deer_coords, cbind(Deer$longitude, Deer$latitude))
-  Deer_within_radius <- which(Deer_distances <= 1800)
-  
-  # サイト番号を割り当て
-  if (is.na(Deer$site_number_home[i])) {
-    Deer$site_number_home[Deer_within_radius] <- i
-  }
-}
+# Deerデータのバウンディングボックスを取得
+bbox <- st_bbox(Deer_utm)
 
-# 重複を解消して連続した番号にする
-unique_sites <- unique(na.omit(Deer$site_number_core))
-Deer$site_number_core <- match(Deer$site_number_core, unique_sites)
+# 5000m x 5000mのグリッドを作成
+grid <- st_make_grid(
+  st_as_sfc(bbox), 
+  cellsize = c(5000, 5000), 
+  what = "polygons"
+) %>% st_as_sf()
 
-unique_sites <- unique(na.omit(Deer$site_number_home))
-Deer$site_number_home <- match(Deer$site_number_home, unique_sites)
+# グリッドにIDを付与
+grid <- grid %>% mutate(grid_id = row_number())
 
-ggplot(Deer, aes(x = site_number_core, fill = cues))+
-  geom_bar(stat = "count")
+# ポイントをグリッドに割り当て
+Deer_with_grid <- st_join(Deer_utm, grid)
 
-ggplot(Deer, aes(x = site_number_home, fill = cues))+
-  geom_bar(stat = "count")
+unique_sites <- unique(na.omit(Deer_with_grid$grid_id))
+Deer_with_grid$grid_id <- match(Deer_with_grid$grid_id, unique_sites)
+
+# グリッドIDを site_number_home に割り当て
+Deer <- Deer %>% mutate(site_number_home = Deer_with_grid$grid_id)
+Deer_with_grid <- Deer_with_grid %>% mutate(site_number_home = Deer_with_grid$grid_id)
+
+# 結果の確認
+print(Deer)
+
+# プロット
+ggplot() +
+  geom_sf(data = grid, fill = NA, color = "gray") + # グリッド
+  geom_sf(data = Deer_with_grid, aes(color = as.factor(site_number_home)), size = 3) + # ポイント
+  labs(color = "Site Number", title = "5000x5000m Grid Clustering") +
+  theme_minimal()
+
 
 ###
 #GLMM
@@ -211,11 +204,14 @@ library(lme4)
 library(Matrix)
 library(ggplot2)
 
+Deer <- subset(Deer, FID <= 150)
+
+
 #シカ
 # lmer()でGLMMを構築
 #現時点ではcoreのランダム効果がない方が説明しやすい結果
 Deer_model <- lmer(
-  FID ~ cues + log(light + 1) + noise + SD  + flock + AvgWind + season +
+  FID ~ cues + log(light + 1) + noise + SD  + flock + AvgWind + season + -1 +
     (1 | site_number_home),
   data = Deer
 )
@@ -243,6 +239,59 @@ vif(lm(FID ~ cues + log(light + 1) + flock + noise + SD + AvgWind + season, data
 #全変数の相関を確認
 vif(lm(FID ~ cues + weather + cloud + flock + AvgWind + MaxWind + noise + log(light + 1) + moon + season, data = Deer))
 
+# emmeans
+library(emmeans)
+
+# 多重比較
+emmeans_FID <- emmeans(Deer_model, pairwise ~ cues)
+summary(emmeans_FID)
+plot(emmeans_FID)
+pwpp(emmeans_FID, sort = FALSE)
+
+library(multcompView)
+library(multcomp)
+cld_result_FID <- cld(emmeans_FID)
+print(cld_result_FID)
+
+library(dplyr)
+# グループ名を数字からアルファベットに置き換え
+cld_result_FID <- cld_result_FID %>%
+  mutate(.group = case_when(
+    .group == " 1 " ~ "a",      
+    .group == "  2" ~ "b",       
+    .group == " 12" ~ "ab"
+  ))
+print(cld_result_FID)
+
+cld_result_FID <- cld_result_FID %>%
+  mutate(color = ifelse(.group == "b", "orange", "black"))
+
+cld_result_FID <-  cld_result_FID %>%
+  mutate(cues = factor(cues, levels = c(
+    "human_vi",
+    "human_vi_ac",
+    "human_vi_dog_ac",
+    "human_vi_no",
+    "human_vi_dog_vi",
+    "human_vi_ac_dog_vi",
+    "human_vi_dog_vi_ac",
+    "human_vi_no_dog_vi"
+  )))
+
+library(ggplot2)
+# プロット作成
+ggplot(cld_result_FID, aes(x = cues, y = emmean, color = color)) +
+  geom_point(size = 8) +                                # 平均値の点
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.3, linewidth = 2.5) + 
+  geom_text(aes(label = .group), hjust = -1, size = 7) +  # グループラベルを追加
+  labs(
+    x = "Cues", 
+    y = "Estimated Means", 
+    title = "Estimated FID Means"
+  ) +
+  theme_classic(base_size = 22) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_color_identity()
 
 # 推定値の信頼区間を計算
 conf_intervals_Deer <- confint(Deer_model)
@@ -264,54 +313,34 @@ results <- data.frame(
 # NAの行を削除
 results <- na.omit(results)
 
-# 推定値と信頼区間のプロット
-# termを因子型にして逆順に設定
-results <-  results %>%
-  mutate(term = factor(term, levels = c(
-    "seasonNonBreeding",
-    "AvgWind",
-    "flock",
-    "SD",
-    "noise",
-    "log(light + 1)",
-    "cueshuman_vi_no_dog_vi",
-    "cueshuman_vi_dog_vi_ac",
-    "cueshuman_vi_ac_dog_vi",
-    "cueshuman_vi_dog_ac",
-    "cueshuman_vi_dog_vi",
-    "cueshuman_vi_no",
-    "cueshuman_vi_ac",
-    "(Intercept)"
-  )))
+# cuesに関する行を除外
+results <- results %>%
+  filter(!grepl("cues", term))
 
 
+results <- results %>%
+  mutate(color = ifelse(lwr > 0, "orange", "black"))
 
-ggplot(results, aes(x = estimate, y = term)) +
-  geom_point(size = 3) +  # 推定値の点
-  scale_y_discrete() +
-  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
-  labs(title = "Flight Initiation Distance",
-       x = "Predictor Variables",
-       y = "Estimated Values") +
+ggplot(results, aes(x = estimate, y = term, color = color)) +
+  geom_point(size = 5) +  
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  
+  labs(title = "Factors Influencing FID",
+       y = "Predictor Variables",
+       x = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-30, 50)) +
-  theme_bw(base_size = 20) +
+  coord_cartesian(xlim = c(-7, 17)) +
+  theme_classic(base_size = 22) +
   scale_y_discrete(
-    labels = c("cueshuman_vi_ac" = "Human(both)",
-               "cueshuman_vi_ac_dog_vi" = "Human(both) & Dog(visual)",
-               "cueshuman_vi_dog_ac" = "Human(visual) & Dog(acoustic)",
-               "cueshuman_vi_dog_vi" = "Human(visual) & Dog(visual)",
-               "cueshuman_vi_dog_vi_ac" = "Human(visual) & Dog(both)",
-               "cueshuman_vi_no" = "Human(visual) & Whitenoise",
-               "cueshuman_vi_no_dog_vi" = "Human(visual) & Dog(visual) & Whitenoise",
-               "log(light + 1)" = "light",
-               "seasonNonBreeding" = "Season(non-breeding)")
-  )
-AIC(Deer_model)
+    labels = c("log(light + 1)" = "light",
+               "seasonNonBreeding" = "Season(non-mating)")
+  ) +
+  scale_color_identity()
+
+
 
 #AD
 Deer_model_AD <- lmer(
-  AD ~ cues + log(light + 1) +  flock + noise + SD + AvgWind + season +
+  AD ~ cues + log(light + 1) +  flock + noise + SD + AvgWind + season +　-1 +
     (1 | site_number_home),
   data = Deer
 )
@@ -319,6 +348,70 @@ Deer_model_AD <- lmer(
 # 結果の確認
 summary(Deer_model_AD)
 
+# 決定係数の確認
+model_AD_r2 <- r2_nakagawa(Deer_model_AD)
+
+print(model_AD_r2)
+
+# AICの確認
+AIC(Deer_model_AD)
+null_model_AD <- lmer(AD ~ (1 | site_number_home),
+                   data = Deer)
+AIC(null_model_AD)
+
+# emmeans
+library(emmeans)
+
+# 多重比較
+emmeans_AD <- emmeans(Deer_model_AD, pairwise ~ cues)
+summary(emmeans_AD)
+plot(emmeans_AD)
+pwpp(emmeans_AD, sort = FALSE)
+
+library(multcompView)
+library(multcomp)
+cld_result_AD <- cld(emmeans_AD)
+print(cld_result_AD)
+
+# グループ名を数字からアルファベットに置き換え
+cld_result_AD <- cld_result_AD %>%
+  mutate(.group = case_when(
+    .group == " 1 " ~ "a",      
+    .group == "  2" ~ "b",       
+    .group == " 12" ~ "ab"
+  ))
+print(cld_result_AD)
+
+cld_result_AD <-  cld_result_AD %>%
+  mutate(cues = factor(cues, levels = c(
+    "human_vi",
+    "human_vi_ac",
+    "human_vi_dog_ac",
+    "human_vi_no",
+    "human_vi_dog_vi",
+    "human_vi_ac_dog_vi",
+    "human_vi_dog_vi_ac",
+    "human_vi_no_dog_vi"
+  )))
+
+
+library(ggplot2)
+# プロット作成
+ggplot(cld_result_AD, aes(x = cues, y = emmean)) +
+  geom_point(size = 8) +                                # 平均値の点
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.3, linewidth = 2.5) + # エラーバー
+  geom_text(aes(label = .group), hjust = -1, size = 7) +  # グループラベルを追加
+  labs(
+    x = "Cues", 
+    y = "Estimated Means", 
+    title = "Estimated AD Means"
+  ) +
+  theme_classic(base_size = 22) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # x軸ラベルを45度傾ける
+
+
+
+###
 # 推定値の信頼区間を計算
 conf_intervals_Deer_AD <- confint(Deer_model_AD)
 # 不必要な行を除外
@@ -330,56 +423,37 @@ estimates_AD <- summary(Deer_model_AD)$coefficients
 # データフレームに変換
 results_AD <- data.frame(
   term = rownames(estimates_AD),
-  estimate_AD = estimates_AD[, "Estimate"],
+  estimate = estimates_AD[, "Estimate"],
   lwr = conf_intervals_Deer_AD[, 1],
   upr = conf_intervals_Deer_AD[, 2]
 )
 
+
 # NAの行を削除
 results_AD <- na.omit(results_AD)
 
-# 推定値と信頼区間のプロット
-# termを因子型にして逆順に設定
-results_AD <-  results_AD %>%
-  mutate(term = factor(term, levels = c(
-    "seasonNonBreeding",
-    "AvgWind",
-    "flock",
-    "SD",
-    "noise",
-    "log(light + 1)",
-    "cueshuman_vi_no_dog_vi",
-    "cueshuman_vi_dog_vi_ac",
-    "cueshuman_vi_ac_dog_vi",
-    "cueshuman_vi_dog_ac",
-    "cueshuman_vi_dog_vi",
-    "cueshuman_vi_no",
-    "cueshuman_vi_ac",
-    "(Intercept)"
-  )))
+# cuesに関する行を除外
+results_AD <- results_AD %>%
+  filter(!grepl("cues", term))
 
-ggplot(results_AD, aes(x = estimate_AD, y = term)) +
-  geom_point(size = 3) +  # 推定値の点
-  scale_y_discrete() +
-  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) +  # 信頼区間
-  labs(title = "Alart Distance",
-       x = "Predictor Variables",
-       y = "Estimated Values") +
+results_AD <- results_AD %>%
+  mutate(color = ifelse(lwr > 0, "orange", "black"))
+
+
+ggplot(results_AD, aes(x = estimate, y = term, color = color)) +
+  geom_point(size = 5) +  
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  # 信頼区間
+  labs(title = "Factors Influencing AD",
+       y = "Predictor Variables",
+       x = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-40, 45)) +
-  theme_bw(base_size = 20) +
+  coord_cartesian(xlim = c(-8, 18)) +
+  theme_classic(base_size = 22) +
   scale_y_discrete(
-    labels = c("cueshuman_vi_ac" = "Human(both)",
-               "cueshuman_vi_ac_dog_vi" = "Human(both) & Dog(visual)",
-               "cueshuman_vi_dog_ac" = "Human(visual) & Dog(acoustic)",
-               "cueshuman_vi_dog_vi" = "Human(visual) & Dog(visual)",
-               "cueshuman_vi_dog_vi_ac" = "Human(visual) & Dog(both)",
-               "cueshuman_vi_no" = "Human(visual) & Whitenoise",
-               "cueshuman_vi_no_dog_vi" = "Human(visual) & Dog(visual) & Whitenoise",
-               "log(light + 1)" = "light",
-               "seasonNonBreeding" = "Season(non-breeding)")
-  )
-
+    labels = c("log(light + 1)" = "light",
+               "seasonNonBreeding" = "Season(non-mating)")
+  ) +
+  scale_color_identity()
 
 
 
@@ -574,3 +648,34 @@ save_path <- file.path(save_dir, "Deer.gpkg")
 
 # GeoPackage形式で保存
 st_write(Deer_sf, save_path, layer = "Deer_layer", delete_dsn = TRUE)
+
+
+###
+# 予想結果図の作成
+
+# データフレームを作成
+# 推定値と信頼区間の値を手動で設定します
+data <- data.frame(
+  Pattern = c("Pattern3", "Pattern2", "Pattern1"),
+  Estimate = c(80, 70, 60),
+  LowerCI = c(76, 64, 54),
+  UpperCI = c(84, 78, 68),
+  Group = c("b", "ab", "a")
+)
+
+# ggplot2ライブラリを読み込み
+library(ggplot2)
+
+# プロットを作成
+ggplot(data, aes(y = Estimate, x = Pattern, ymin = LowerCI, ymax = UpperCI)) +
+  geom_pointrange(size = 1) + # 推定値と信頼区間を描画
+  geom_text(aes(label = Group), hjust = -1, size = 5) + # グループ記号を推定値の真下に表示
+  theme_bw(base_size = 16) +
+  labs(
+    title = "Predicting results",
+    y = "Estimate",
+    x = NULL
+  ) +
+  theme(
+    legend.position = "none" 
+  )
