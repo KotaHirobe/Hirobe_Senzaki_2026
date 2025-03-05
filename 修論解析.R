@@ -17,7 +17,7 @@ long_data <- Soundlevel %>%
 ggplot(long_data, aes(x = dist, y = value, color = variable, group = variable)) +
   geom_line() +
   labs(title = "Sound Levels Over Distance", x = "Distance(m)", y = "Sound Level(dBA)") +
-  theme_bw(base_size = 11)
+  theme_classic(base_size = 22)
 
 
 
@@ -264,10 +264,24 @@ cld_result_FID <- cld_result_FID %>%
   ))
 print(cld_result_FID)
 
+cld_result_FID <- cld_result_FID %>%
+  mutate(color = ifelse(.group == "b", "orange", "black"))
+
+cld_result_FID <-  cld_result_FID %>%
+  mutate(cues = factor(cues, levels = c(
+    "human_vi",
+    "human_vi_ac",
+    "human_vi_dog_ac",
+    "human_vi_no",
+    "human_vi_dog_vi",
+    "human_vi_ac_dog_vi",
+    "human_vi_dog_vi_ac",
+    "human_vi_no_dog_vi"
+  )))
 
 library(ggplot2)
 # プロット作成
-ggplot(cld_result_FID, aes(x = cues, y = emmean)) +
+ggplot(cld_result_FID, aes(x = cues, y = emmean, color = color)) +
   geom_point(size = 8) +                                # 平均値の点
   geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.3, linewidth = 2.5) + 
   geom_text(aes(label = .group), hjust = -1, size = 7) +  # グループラベルを追加
@@ -277,7 +291,8 @@ ggplot(cld_result_FID, aes(x = cues, y = emmean)) +
     title = "Estimated FID Means"
   ) +
   theme_classic(base_size = 22) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # x軸ラベルを45度傾ける
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_color_identity()
 
 # 推定値の信頼区間を計算
 conf_intervals_Deer <- confint(Deer_model)
@@ -310,7 +325,7 @@ results <- results %>%
 ggplot(results, aes(x = estimate, y = term, color = color)) +
   geom_point(size = 5) +  
   geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  
-  labs(title = "Flight Initiation Distance",
+  labs(title = "Factors Influencing FID",
        y = "Predictor Variables",
        x = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
@@ -368,6 +383,18 @@ cld_result_AD <- cld_result_AD %>%
   ))
 print(cld_result_AD)
 
+cld_result_AD <-  cld_result_AD %>%
+  mutate(cues = factor(cues, levels = c(
+    "human_vi",
+    "human_vi_ac",
+    "human_vi_dog_ac",
+    "human_vi_no",
+    "human_vi_dog_vi",
+    "human_vi_ac_dog_vi",
+    "human_vi_dog_vi_ac",
+    "human_vi_no_dog_vi"
+  )))
+
 
 library(ggplot2)
 # プロット作成
@@ -417,7 +444,7 @@ results_AD <- results_AD %>%
 ggplot(results_AD, aes(x = estimate, y = term, color = color)) +
   geom_point(size = 5) +  
   geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  # 信頼区間
-  labs(title = "Alart Distance",
+  labs(title = "Factors Influencing AD",
        y = "Predictor Variables",
        x = "Estimated Values") +
   geom_vline(xintercept = 0, linetype = "dotted") +
