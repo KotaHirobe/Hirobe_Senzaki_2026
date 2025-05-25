@@ -1,5 +1,6 @@
 #####
 #音量減衰の確認
+# 論文出すときにデータのソースコード書き換える
 Soundlevel <- read.csv("c:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/dbalv.csv")
 print(head(Soundlevel))
 
@@ -54,7 +55,7 @@ FIDdata$day_or_night <- ifelse(FIDdata$time >= FIDdata$sunrise & FIDdata$time <=
 print(head(FIDdata))
 table(FIDdata$day_or_night)
 
-#時間データをGLMMで使えるよう小数にする#時間データをGLMMで使えるよう小数にする
+#時間データをGLMMで使えるよう小数にする
 FIDdata$time_num <- hour(FIDdata$time) + minute(FIDdata$time)/60
 
 
@@ -142,7 +143,7 @@ merged_data <- merged_data %>%
 print(head(merged_data))
 
 
-
+### 論文にするときはシカだけのデータにしておく
 
 
 ###
@@ -191,6 +192,7 @@ Deer_with_grid <- Deer_with_grid %>% mutate(site_number_home = Deer_with_grid$gr
 print(Deer)
 
 # プロット
+library(ggplot2)
 ggplot() +
   geom_sf(data = grid, fill = NA, color = "gray") + # グリッド
   geom_sf(data = Deer_with_grid, aes(color = as.factor(site_number_home)), size = 3) + # ポイント
@@ -202,16 +204,33 @@ ggplot() +
 #GLMM
 library(lme4)
 library(Matrix)
-library(ggplot2)
 
 Deer <- subset(Deer, FID <= 150)
+Deer$log_light <- log((Deer$light)+1)
+
+
+#5/25作業
+Deer <- subset(Deer, cues %in% c("human_vi", "human_vi_no", "human_vi_ac", "human_vi_dog_ac",
+                              "human_vi_dog_vi", "human_vi_dog_vi_ac",
+                              "human_vi_ac_dog_vi", "human_vi_no_dog_vi"))
+Deer_cover <- subset(Deer, cues %in% c("human_vi_dog_vi",
+                                       "human_vi_dog_vi_ac",
+                                       "human_vi_dog_vi_cover",
+                                       "human_vi_dog_vi_ac_cover"))
+
+
+
+Deer_cover_model <- glm(
+  FID ~ cues*log_light * noise + SD + flock +AvgWind + season + -1,
+  data = Deer_cover
+)
+summary(Deer_cover_model)
 
 
 #シカ
 # lmer()でGLMMを構築
-#現時点ではcoreのランダム効果がない方が説明しやすい結果
 Deer_model <- lmer(
-  FID ~ cues + log(light + 1) + noise + SD  + flock + AvgWind + season + -1 +
+  FID ~ cues*log_light + noise + SD  + flock + AvgWind + season + -1 +
     (1 | site_number_home),
   data = Deer
 )
@@ -226,11 +245,6 @@ model_r2 <- r2_nakagawa(Deer_model)
 
 print(model_r2)
 
-# AICの確認
-AIC(Deer_model)
-null_model <- lmer(FID ~ (1 | site_number_home),
-                   data = Deer)
-AIC(null_model)
 
 
 library(car)
@@ -238,6 +252,60 @@ vif(lm(FID ~ cues + log(light + 1) + flock + noise + SD + AvgWind + season, data
 
 #全変数の相関を確認
 vif(lm(FID ~ cues + weather + cloud + flock + AvgWind + MaxWind + noise + log(light + 1) + moon + season, data = Deer))
+
+
+library(emmeans)
+
+# 多重比較
+emmeans_FID <- emmeans(Deer_model, pairwise ~ cues)
+summary(emmeans_FID)
+plot(emmeans_FID)
+pwpp(emmeans_FID, sort = FALSE)
+
+library(multcompView)
+library(multcomp)
+cld_result_FID <- cld(emmeans_FID)
+print(cld_result_FID)
+
+library(dplyr)
+# グループ名を数字からアルファベットに置き換え
+cld_result_FID <- cld_result_FID %>%
+  mutate(.group = case_when(
+    .group == " 1 " ~ "a",      
+    .group == "  2" ~ "b",       
+    .group == " 12" ~ "ab"
+  ))
+print(cld_result_FID)
+
+cld_result_FID <- cld_result_FID %>%
+  mutate(color = ifelse(.group == "b", "orange", "black"))
+
+cld_result_FID <-  cld_result_FID %>%
+  mutate(cues = factor(cues, levels = c(
+    "human_vi",
+    "human_vi_ac",
+    "human_vi_dog_ac",
+    "human_vi_no",
+    "human_vi_dog_vi",
+    "human_vi_ac_dog_vi",
+    "human_vi_dog_vi_ac",
+    "human_vi_no_dog_vi"
+  )))
+
+library(ggplot2)
+# プロット作成
+ggplot(cld_result_FID, aes(x = cues, y = emmean, color = color)) +
+  geom_point(size = 8) +                                # 平均値の点
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.3, linewidth = 2.5) + 
+  geom_text(aes(label = .group), hjust = -1, size = 7) +  # グループラベルを追加
+  labs(
+    x = "Cues", 
+    y = "推定平均値", 
+    title = "FIDの推定平均値"
+  ) +
+  theme_classic(base_size = 22) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_color_identity()
 
 # emmeans
 library(emmeans)
@@ -286,12 +354,45 @@ ggplot(cld_result_FID, aes(x = cues, y = emmean, color = color)) +
   geom_text(aes(label = .group), hjust = -1, size = 7) +  # グループラベルを追加
   labs(
     x = "Cues", 
-    y = "Estimated Means", 
-    title = "Estimated FID Means"
+    y = "推定平均値", 
+    title = "FIDの推定平均値"
   ) +
   theme_classic(base_size = 22) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_color_identity()
+
+
+library(ggeffects)
+library(viridis)
+predicted_FID <- ggpredict(Deer_model, terms = c("log_light", "cues"))
+library(emmeans)
+FIDslope <- lstrends(Deer_model, ~cues, var = "log_light")
+summary(FIDslope)
+
+custom_colors <- c(
+  "human_vi" = "blue",
+  "human_vi_ac" = "darkgreen",
+  "human_vi_ac_dog_vi" = "darkgreen",
+  "human_vi_dog_ac" = "#F0E442",
+  "human_vi_dog_vi" = "blue",
+  "human_vi_dog_vi_ac" = "darkgreen",
+  "human_vi_no" = "#999999",
+  "human_vi_no_dog_vi" = "#999999"
+)
+
+legend_order <- c(
+  "human_vi", "human_vi_dog_vi", "human_vi_ac", "human_vi_ac_dog_vi", "human_vi_dog_vi_ac", "human_vi_dog_ac", 
+  "human_vi_no", "human_vi_no_dog_vi"
+)
+
+ggplot(predicted_FID, aes(x = x, y = predicted, color = group, fill = group)) +
+  geom_line(size = 1) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = group), alpha = 0.05, color = NA) +
+  labs(x = "明るさ", y = "FIDの推定値", title = "明るさとFIDの関係") +
+  scale_color_manual(name = "Cues", values = custom_colors, limits = legend_order) +
+  scale_fill_manual(name = "Cues", values = custom_colors, limits = legend_order) +
+  theme_classic(base_size = 22)
+
 
 # 推定値の信頼区間を計算
 conf_intervals_Deer <- confint(Deer_model)
@@ -324,15 +425,19 @@ results <- results %>%
 ggplot(results, aes(x = estimate, y = term, color = color)) +
   geom_point(size = 5) +  
   geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  
-  labs(title = "Factors Influencing FID",
-       y = "Predictor Variables",
-       x = "Estimated Values") +
+  labs(title = "FIDに影響する要因",
+       y = "説明変数",
+       x = "回帰係数") +
   geom_vline(xintercept = 0, linetype = "dotted") +
   coord_cartesian(xlim = c(-7, 17)) +
   theme_classic(base_size = 22) +
   scale_y_discrete(
-    labels = c("log(light + 1)" = "light",
-               "seasonNonBreeding" = "Season(non-mating)")
+    labels = c("log(light + 1)" = "明るさ",
+               "seasonNonBreeding" = "非交尾期",
+               "SD" = "測定開始距離",
+               "noise" = "騒音",
+               "flock" = "群れサイズ",
+               "AvgWind" = "平均風速")
   ) +
   scale_color_identity()
 
@@ -340,10 +445,30 @@ ggplot(results, aes(x = estimate, y = term, color = color)) +
 
 #AD
 Deer_model_AD <- lmer(
-  AD ~ cues + log(light + 1) +  flock + noise + SD + AvgWind + season +　-1 +
+  AD ~ cues*log_light + noise + flock + SD + AvgWind + season +　-1 +
     (1 | site_number_home),
   data = Deer
 )
+library(lme4)
+library(performance)
+
+Deer_reduced <- subset(Deer, cues %in% c("human_vi_ac", "human_vi_dog_ac", "human_vi_no",
+                                      "human_vi_ac_dog_vi", "human_vi_dog_vi_ac", "human_vi_no_dog_vi"))
+
+# 視覚情報を除いたモデル
+Deer_model_reduced <- lmer(
+  AD ~ cues * log_light + noise + flock + SD + AvgWind + season - 1 +
+    (1 | site_number_home),
+  data = Deer_reduced
+)
+
+# R²の比較
+r2_full <- r2(Deer_model_AD)
+r2_reduced <- r2(Deer_model_reduced)
+
+# 部分決定係数の算出
+partial_r2 <- r2_full$R2_marginal - r2_reduced$R2_marginal
+partial_r2
 
 # 結果の確認
 summary(Deer_model_AD)
@@ -353,11 +478,12 @@ model_AD_r2 <- r2_nakagawa(Deer_model_AD)
 
 print(model_AD_r2)
 
-# AICの確認
-AIC(Deer_model_AD)
-null_model_AD <- lmer(AD ~ (1 | site_number_home),
-                   data = Deer)
-AIC(null_model_AD)
+# 主効果の確認
+library(effectsize)
+
+std_params <- effectsize::standardize_parameters(Deer_model_AD)
+std_params
+
 
 # emmeans
 library(emmeans)
@@ -403,12 +529,43 @@ ggplot(cld_result_AD, aes(x = cues, y = emmean)) +
   geom_text(aes(label = .group), hjust = -1, size = 7) +  # グループラベルを追加
   labs(
     x = "Cues", 
-    y = "Estimated Means", 
-    title = "Estimated AD Means"
+    y = "推定平均値", 
+    title = "ADの推定平均値"
   ) +
   theme_classic(base_size = 22) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  # x軸ラベルを45度傾ける
 
+# 明るさ横軸でcueごとの推定値をプロット
+library(ggeffects)
+library(viridis)
+library(emmeans)
+predicted_AD <- ggpredict(Deer_model_AD, terms = c("log_light", "cues"))
+ADslope <- lstrends(Deer_model_AD, ~cues, var = "log_light")
+summary(ADslope)
+
+custom_colors <- c(
+  "human_vi" = "blue",
+  "human_vi_ac" = "darkgreen",
+  "human_vi_ac_dog_vi" = "darkgreen",
+  "human_vi_dog_ac" = "#F0E442",
+  "human_vi_dog_vi" = "blue",
+  "human_vi_dog_vi_ac" = "darkgreen",
+  "human_vi_no" = "#999999",
+  "human_vi_no_dog_vi" = "#999999"
+)
+
+legend_order <- c(
+  "human_vi", "human_vi_dog_vi", "human_vi_ac", "human_vi_ac_dog_vi", "human_vi_dog_vi_ac", "human_vi_dog_ac", 
+  "human_vi_no", "human_vi_no_dog_vi"
+)
+
+ggplot(predicted_AD, aes(x = x, y = predicted, color = group, fill = group)) +
+  geom_line(size = 1) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = group), alpha = 0.05, color = NA) +
+  labs(x = "明るさ", y = "ADの推定値", title = "明るさとADの関係") +
+  scale_color_manual(name = "Cues", values = custom_colors, limits = legend_order) +
+  scale_fill_manual(name = "Cues", values = custom_colors, limits = legend_order) +
+  theme_classic(base_size = 22)
 
 
 ###
@@ -443,15 +600,19 @@ results_AD <- results_AD %>%
 ggplot(results_AD, aes(x = estimate, y = term, color = color)) +
   geom_point(size = 5) +  
   geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  # 信頼区間
-  labs(title = "Factors Influencing AD",
-       y = "Predictor Variables",
-       x = "Estimated Values") +
+  labs(title = "ADに影響する要因",
+       y = "説明変数",
+       x = "回帰係数") +
   geom_vline(xintercept = 0, linetype = "dotted") +
   coord_cartesian(xlim = c(-8, 18)) +
   theme_classic(base_size = 22) +
   scale_y_discrete(
-    labels = c("log(light + 1)" = "light",
-               "seasonNonBreeding" = "Season(non-mating)")
+    labels = c("log(light + 1)" = "明るさ",
+               "seasonNonBreeding" = "非交尾期",
+               "SD" = "測定開始距離",
+               "noise" = "騒音",
+               "flock" = "群れサイズ",
+               "AvgWind" = "平均風速")
   ) +
   scale_color_identity()
 
