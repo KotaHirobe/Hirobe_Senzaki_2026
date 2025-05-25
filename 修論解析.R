@@ -362,36 +362,6 @@ ggplot(cld_result_FID, aes(x = cues, y = emmean, color = color)) +
   scale_color_identity()
 
 
-library(ggeffects)
-library(viridis)
-predicted_FID <- ggpredict(Deer_model, terms = c("log_light", "cues"))
-library(emmeans)
-FIDslope <- lstrends(Deer_model, ~cues, var = "log_light")
-summary(FIDslope)
-
-custom_colors <- c(
-  "human_vi" = "blue",
-  "human_vi_ac" = "darkgreen",
-  "human_vi_ac_dog_vi" = "darkgreen",
-  "human_vi_dog_ac" = "#F0E442",
-  "human_vi_dog_vi" = "blue",
-  "human_vi_dog_vi_ac" = "darkgreen",
-  "human_vi_no" = "#999999",
-  "human_vi_no_dog_vi" = "#999999"
-)
-
-legend_order <- c(
-  "human_vi", "human_vi_dog_vi", "human_vi_ac", "human_vi_ac_dog_vi", "human_vi_dog_vi_ac", "human_vi_dog_ac", 
-  "human_vi_no", "human_vi_no_dog_vi"
-)
-
-ggplot(predicted_FID, aes(x = x, y = predicted, color = group, fill = group)) +
-  geom_line(size = 1) +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = group), alpha = 0.05, color = NA) +
-  labs(x = "明るさ", y = "FIDの推定値", title = "明るさとFIDの関係") +
-  scale_color_manual(name = "Cues", values = custom_colors, limits = legend_order) +
-  scale_fill_manual(name = "Cues", values = custom_colors, limits = legend_order) +
-  theme_classic(base_size = 22)
 
 
 # 推定値の信頼区間を計算
