@@ -203,6 +203,9 @@ ggplot() +
 
 #####
 # デコイにカバーをかぶせたGLM
+# これも一緒にした方がいいと思った
+# ベースラインからの増加量を比較するか、今まで通りの群間比較か
+# ベースラインからの増加量比較にするなら、信頼区間が0をまたぐかどうかで見る？
 library(lme4)
 library(Matrix)
 
@@ -379,7 +382,7 @@ ggplot(cld_result_cover_AD, aes(x = cues, y = emmean, color = color)) +
 Deer_model <- lmer(
   FID ~ cues + log_light + noise + SD  + flock + AvgWind + season +
     (1 | site_number_home),
-  data = Deer_withoutcover
+  data = Deer
 )
 
 # 結果の確認
@@ -511,7 +514,7 @@ ggplot(results, aes(x = estimate, y = term, color = color)) +
 Deer_model_AD <- lmer(
   AD ~ cues + log_light + noise + flock + SD + AvgWind + season +
     (1 | site_number_home),
-  data = Deer_withoutcover
+  data = Deer
 )
 library(lme4)
 library(performance)
