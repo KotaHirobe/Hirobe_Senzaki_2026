@@ -192,10 +192,10 @@ Deer <- subset(Deer, FID <= 150)
 Deer$log_light <- log((Deer$light)+1)
 
 # lmer()でGLMMを構築
-Deer_model <- glmer(
+Deer_model <- lmer(
   FID ~ cues + log_light + noise + SD  + flock + AvgWind + season + -1 +
     (1 | site_number_home),
-  data = Deer_withoutcover
+  data = Deer
 )
 # 結果の確認
 summary(Deer_model)
