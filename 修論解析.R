@@ -183,44 +183,36 @@ ggplot() +
   theme_minimal()
 
 
-#####
+# GLMM ####
+# 年をランダム効果に入れるべきか？
 library(lme4)
 library(Matrix)
 
 Deer <- subset(Deer, FID <= 150)
 Deer$log_light <- log((Deer$light)+1)
 
-
-#####
-#シカ
 # lmer()でGLMMを構築
-Deer_model <- lmer(
-  FID ~ cues + log_light + noise + SD  + flock + AvgWind + season +
+Deer_model <- glmer(
+  FID ~ cues + log_light + noise + SD  + flock + AvgWind + season + -1 +
     (1 | site_number_home),
-  data = Deer
+  data = Deer_withoutcover
 )
-
 # 結果の確認
 summary(Deer_model)
 
-library(performance)
 
+library(performance)
 # 決定係数の確認
 model_r2 <- r2_nakagawa(Deer_model)
-
 print(model_r2)
-
-
 
 library(car)
 vif(lm(FID ~ cues + log(light + 1) + flock + noise + SD + AvgWind + season, data = Deer))
-
-#全変数の相関を確認
 vif(lm(FID ~ cues + weather + cloud + flock + AvgWind + MaxWind + noise + log(light + 1) + moon + season + day_or_night, data = Deer))
 
 
-library(emmeans)
 
+library(emmeans)
 # 多重比較
 emmeans_FID <- emmeans(Deer_model, pairwise ~ cues)
 summary(emmeans_FID)
@@ -244,8 +236,8 @@ cld_result_FID <- cld_result_FID %>%
   ))
 print(cld_result_FID)
 
-cld_result_FID <- cld_result_FID %>%
-  mutate(color = ifelse(.group == "b", "orange", "black"))
+#cld_result_FID <- cld_result_FID %>%
+ # mutate(color = ifelse(.group == "b", "orange", "black"))
 
 cld_result_FID <-  cld_result_FID %>%
   mutate(cues = factor(cues, levels = c(
@@ -256,15 +248,17 @@ cld_result_FID <-  cld_result_FID %>%
     "human_vi_dog_vi",
     "human_vi_ac_dog_vi",
     "human_vi_dog_vi_ac",
-    "human_vi_no_dog_vi"
+    "human_vi_no_dog_vi",
+    "human_vi_dog_vi_cover",
+    "human_vi_dog_vi_ac_cover"
   )))
 
 library(ggplot2)
 # プロット作成
-ggplot(cld_result_FID, aes(x = cues, y = emmean, color = color)) +
-  geom_point(size = 8) +                                # 平均値の点
+ggplot(cld_result_FID, aes(x = cues, y = emmean)) +
+  geom_point(size = 8) +                                
   geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.3, linewidth = 2.5) + 
-  geom_text(aes(label = .group), hjust = -1, size = 7) +  # グループラベルを追加
+  geom_text(aes(label = .group), hjust = -1, size = 7) +  
   labs(
     x = "Cues", 
     y = "Estimated mean value (m)", 
@@ -275,13 +269,9 @@ ggplot(cld_result_FID, aes(x = cues, y = emmean, color = color)) +
   scale_color_identity()
 
 
-###
-# 推定値の信頼区間を計算
+# 信頼区間を計算
 conf_intervals_Deer <- confint(Deer_model)
-# 不必要な行を除外
 conf_intervals_Deer <- conf_intervals_Deer[!rownames(conf_intervals_Deer) %in% c(".sig01", ".sig02",  ".sigma"), ]
-
-# 推定値を取得
 estimates <- summary(Deer_model)$coefficients
 
 # データフレームに変換
@@ -291,8 +281,6 @@ results <- data.frame(
   lwr = conf_intervals_Deer[, 1],
   upr = conf_intervals_Deer[, 2]
 )
-
-
 # NAの行を削除
 results <- na.omit(results)
 
@@ -324,47 +312,19 @@ ggplot(results, aes(x = estimate, y = term, color = color)) +
   scale_color_identity()
 
 
-#####
-#AD
+# AD ####
 Deer_model_AD <- lmer(
-  AD ~ cues + log_light + noise + flock + SD + AvgWind + season +
+  AD ~ cues + log_light + noise + flock + SD + AvgWind + season + -1 +
     (1 | site_number_home),
   data = Deer
 )
-library(lme4)
-library(performance)
-
-Deer_reduced <- subset(Deer, cues %in% c("human_vi_ac", "human_vi_dog_ac", "human_vi_no",
-                                      "human_vi_ac_dog_vi", "human_vi_dog_vi_ac", "human_vi_no_dog_vi"))
-
-# 視覚情報を除いたモデル
-Deer_model_reduced <- lmer(
-  AD ~ cues * log_light + noise + flock + SD + AvgWind + season - 1 +
-    (1 | site_number_home),
-  data = Deer_reduced
-)
-
-# R²の比較
-r2_full <- r2(Deer_model_AD)
-r2_reduced <- r2(Deer_model_reduced)
-
-# 部分決定係数の算出
-partial_r2 <- r2_full$R2_marginal - r2_reduced$R2_marginal
-partial_r2
 
 # 結果の確認
 summary(Deer_model_AD)
 
 # 決定係数の確認
 model_AD_r2 <- r2_nakagawa(Deer_model_AD)
-
 print(model_AD_r2)
-
-# 主効果の確認
-library(effectsize)
-
-std_params <- effectsize::standardize_parameters(Deer_model_AD)
-std_params
 
 
 # emmeans
@@ -384,9 +344,7 @@ print(cld_result_AD)
 # グループ名を数字からアルファベットに置き換え
 cld_result_AD <- cld_result_AD %>%
   mutate(.group = case_when(
-    .group == " 1 " ~ "a",      
-    .group == "  2" ~ "b",       
-    .group == " 12" ~ "ab"
+    .group == "1" ~ "a"
   ))
 print(cld_result_AD)
 
@@ -399,7 +357,9 @@ cld_result_AD <-  cld_result_AD %>%
     "human_vi_dog_vi",
     "human_vi_ac_dog_vi",
     "human_vi_dog_vi_ac",
-    "human_vi_no_dog_vi"
+    "human_vi_no_dog_vi",
+    "human_vi_dog_vi_cover",
+    "human_vi_dog_vi_ac_cover"
   )))
 
 
