@@ -183,7 +183,7 @@ ggplot() +
   theme_minimal()
 
 
-# GLMM ####
+# LMM ####
 # 年をランダム効果に入れるべきか？
 library(lme4)
 library(Matrix)
@@ -195,7 +195,7 @@ Deer$log_light <- log((Deer$light)+1)
 Deer_model <- glmer(
   FID ~ cues + log_light + noise + SD  + flock + AvgWind + season + -1 +
     (1 | site_number_home),
-  data = Deer_withoutcover
+  data = Deer
 )
 # 結果の確認
 summary(Deer_model)
