@@ -87,7 +87,7 @@ merged_data$latitude <- as.numeric(sub("POINT \\([^ ]+ ([^ ]+)\\)", "\\1", merge
 #不要な行を削除
 # dplyrパッケージを読み込み
 library(dplyr)
-merged_data <- merged_data %>% select(-説明, -照度1, -照度2, -照度3, -X, -X.1, soundNo.)
+merged_data <- merged_data %>% select(-説明, -照度1, -照度2, -照度3, -X, -X.1, -soundNo.)
 
 
 
