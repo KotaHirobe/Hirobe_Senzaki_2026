@@ -1,5 +1,4 @@
-#####
-# 音量減衰の確認
+# 音量減衰の確認 ####
 # 論文出すときにデータのソースコード書き換える
 Soundlevel <- read.csv("c:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/dbalv.csv")
 print(head(Soundlevel))
@@ -14,7 +13,6 @@ long_data <- Soundlevel %>%
     values_to = "value"
   )
 
-# Plot the data
 ggplot(long_data, aes(x = dist, y = value, color = variable, group = variable)) +
   geom_line() +
   labs(title = "Sound Levels Over Distance", x = "Distance(m)", y = "Sound Level(dBA)") +
@@ -22,32 +20,28 @@ ggplot(long_data, aes(x = dist, y = value, color = variable, group = variable)) 
 
 
 
-#####
-#パッケージの読み込み
+# データの読み込み ####
 library(lubridate)
 
-#データの読み込みと処理
 FIDdata <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/FIDdata.csv")
-print(head(FIDdata))
 
-#NAを消す
+# NAを消す
 FIDdata <- na.omit(FIDdata)
 
-#lightを数値として読み込み
+# lightを数値として読み込み
 FIDdata$light <- as.numeric(FIDdata$light)
 
-#日付が数字として読み込まれるので日時のデータに変換
+# 日付(数値)を日時のデータに変換
 FIDdata$sunrise <- as.POSIXct(paste(FIDdata$day, FIDdata$sunrise))
 FIDdata$sunset <- as.POSIXct(paste(FIDdata$day, FIDdata$sunset))
 FIDdata$time <- as.POSIXct(paste(FIDdata$day, FIDdata$time))
 
-#日付を経過日数に変換
+# 日付を経過日数に変換
 min_date <- min(FIDdata$day, na.rm = TRUE)
 FIDdata$day_count <- as.numeric(difftime(FIDdata$day, min_date, units = "days")) +1
 head(FIDdata)
 
-#昼と夜を分ける
-#いらないかも
+# 昼と夜を分ける
 FIDdata$day_or_night <- ifelse(FIDdata$time >= FIDdata$sunrise & FIDdata$time <= FIDdata$sunset,
                                "day",
                                ifelse(FIDdata$time > FIDdata$sunset | FIDdata$time < FIDdata$sunrise,
@@ -56,13 +50,12 @@ FIDdata$day_or_night <- ifelse(FIDdata$time >= FIDdata$sunrise & FIDdata$time <=
 print(head(FIDdata))
 table(FIDdata$day_or_night)
 
-#時間データをGLMMで使えるよう小数にする
+#時間データを小数にする
 FIDdata$time_num <- hour(FIDdata$time) + minute(FIDdata$time)/60
 
 
 
-#####
-#プロット位置データの読み込み
+# プロット位置データの読み込み ####
 site1 <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/site202408.csv")
 site2 <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/site20241006.csv")
 site3 <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/site20241013.csv")
@@ -71,12 +64,12 @@ all_sites <- rbind(site1, site2, site3, site4)
 print(head(all_sites))
 
 # "名前"列から数字部分だけを抽出し、新しい列 "" を作成
-# 元データに日本語があるのでそれがなくなるようにする
+# 元データに日本語があるので、論部投稿時にはそれがなくなるようにする
+# 論文投稿時には整理されたシカのデータだけを読み込めるようにしとく
 all_sites$number <- as.numeric(gsub("[^0-9]", "", all_sites$名前))
 
 
-#####
-#データの結合
+# データの結合 ####
 # "名前番号"列と "No"列で結合
 merged_data <- merge(all_sites, FIDdata, by.x = "number", by.y = "No")
 print(head(merged_data))
@@ -86,15 +79,12 @@ merged_data$longitude <- as.numeric(sub("POINT \\(([^ ]+) .*", "\\1", merged_dat
 merged_data$latitude <- as.numeric(sub("POINT \\([^ ]+ ([^ ]+)\\)", "\\1", merged_data$WKT))
 
 #不要な行を削除
-# dplyrパッケージを読み込み
 library(dplyr)
 merged_data <- merged_data %>% dplyr::select(-説明, -照度1, -照度2, -照度3, -X, -X.1, soundNo.)
 
 
 
-#####
-#site_numberの設定
-# 必要なパッケージを読み込み
+# site_numberの設定 ####
 library(geosphere)
 
 # 新しい列 "site_number" を追加し、初期値をNAに設定
@@ -115,14 +105,12 @@ merged_data$site_number <- match(merged_data$site_number, unique_sites)
 
 
 ###
-#150m離れていなくて1週間あけてとっていないデータを削除
-# 名前番号が昇順になるように並び替え
+#同じ種で150m離れていないかつ7日以上日付が空いていないデータの片方を省く
 merged_data$day <- as.Date(merged_data$day)
 merged_data <- merged_data[order(merged_data$site_number, merged_data$number), ]
 
-#同じ種で150m離れていないかつ7日以上日付が空いていないデータの片方を省けるようにする
 merged_data <- merged_data %>%
-  arrange(site_number, species, day_count) %>% # site_numberとspeciesでグループ化しdayで並べ替え
+  arrange(site_number, species, day_count) %>% 
   group_by(site_number, species) %>%
   mutate(diff_days = day_count - lag(day_count, default = first(day_count))) %>%
   filter(!(diff_days < 7 & row_number() == 2)) %>%
@@ -144,17 +132,11 @@ merged_data <- merged_data %>%
 print(head(merged_data))
 
 
-### 論文にするときはシカだけのデータにしておく
-
-
-###
-#種ごとに分割
+# 種ごとに分割
 Deer <- subset(merged_data, species == "Deer")
 
 
-###
 #行動圏にあわせて番号を設定
-
 library(geosphere) 
 
 # サイト番号列
@@ -202,178 +184,11 @@ ggplot() +
 
 
 #####
-# デコイにカバーをかぶせたGLM
-# これも一緒にした方がいいと思った
-# ベースラインからの増加量を比較するか、今まで通りの群間比較か
-# ベースラインからの増加量比較にするなら、信頼区間が0をまたぐかどうかで見る？
 library(lme4)
 library(Matrix)
 
 Deer <- subset(Deer, FID <= 150)
 Deer$log_light <- log((Deer$light)+1)
-
-
-# 全部一緒にせずcoverは分けて比較する
-Deer_cover <- subset(Deer, cues %in% c("human_vi", 
-                                       "human_vi_dog_vi",
-                                       "human_vi_dog_vi_ac",
-                                       "human_vi_dog_vi_cover",
-                                       "human_vi_dog_vi_ac_cover"))
-
-Deer_withoutcover <- subset(Deer, cues %in% c("human_vi",
-                                              "human_vi_dog_vi",
-                                              "human_vi_ac",
-                                              "human_vi_dog_ac",
-                                              "human_vi_no",
-                                              "human_vi_ac_dog_vi",
-                                              "human_vi_dog_vi_ac",
-                                              "human_vi_no_dog_vi"))
-
-table(Deer_withoutcover$species)
-table(Deer_withoutcover$cues)
-
-# ランダム効果入れるとsingular fitになるのでGLMにする
-Deer_cover_model <- glm(
-  FID ~ cues + log_light + noise + SD + flock +AvgWind + season,
-  data = Deer_cover
-)
-summary(Deer_cover_model)
-
-library(performance)
-
-# GLMは非対応なので他の方法検討
-# 決定係数の確認
-#cover_model_r2 <- r2_nakagawa(Deer_cover_model)
-
-#print(cover_model_r2)
-
-
-
-library(car)
-vif(lm(FID ~ cues + log(light + 1) + flock + noise + SD + AvgWind + season, data = Deer))
-
-#全変数の相関を確認
-vif(lm(FID ~ cues + weather + cloud + flock + AvgWind + MaxWind + noise + log(light + 1) + moon + season, data = Deer))
-
-
-library(emmeans)
-
-# 多重比較
-emmeans_cover_FID <- emmeans(Deer_cover_model, pairwise ~ cues)
-summary(emmeans_cover_FID)
-plot(emmeans_cover_FID)
-pwpp(emmeans_cover_FID, sort = FALSE)
-
-library(multcompView)
-library(multcomp)
-cld_result_cover_FID <- cld(emmeans_cover_FID)
-print(cld_result_cover_FID)
-
-library(dplyr)
-# グループ名を数字からアルファベットに置き換え
-cld_result_cover_FID <- cld_result_cover_FID %>%
-  mutate(.group = case_when(
-    .group == " 1 " ~ "a",      
-    .group == "  2" ~ "b",       
-    .group == " 12" ~ "ab"
-  ))
-print(cld_result_cover_FID)
-
-cld_result_cover_FID <- cld_result_cover_FID %>%
-  mutate(color = ifelse(cues %in% c("human_vi_dog_vi_cover", "human_vi_dog_vi_ac_cover"), "blue", "black"))
-
-cld_result_cover_FID <-  cld_result_cover_FID %>%
-  mutate(cues = factor(cues, levels = c(
-    "human_vi", 
-    "human_vi_dog_vi",
-    "human_vi_dog_vi_ac",
-    "human_vi_dog_vi_cover",
-    "human_vi_dog_vi_ac_cover")))
-
-library(ggplot2)
-# プロット作成
-# 横800縦700
-ggplot(cld_result_cover_FID, aes(x = cues, y = emmean, color = color)) +
-  geom_point(size = 8) +                                
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.3, linewidth = 2.5) + 
-  geom_text(aes(label = .group), hjust = -1, size = 7) +  
-  labs(
-    x = "Cues", 
-    y = "Estimated mean value (m)", 
-    title = "Estimated mean values of FID"
-  ) +
-  theme_classic(base_size = 22) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_color_identity()
-
-
-#####
-# ADのcoverあり
-Deer_cover_model_AD <- glm(
-  AD ~ cues + log_light + noise + SD + flock +AvgWind + season + -1,
-  data = Deer_cover
-)
-summary(Deer_cover_model_AD)
-
-library(performance)
-
-# GLMは非対応なので他の方法検討
-# 決定係数の確認
-#cover_model_r2 <- r2_nakagawa(Deer_cover_model)
-
-#print(cover_model_r2)
-
-
-library(emmeans)
-
-# 多重比較
-emmeans_cover_AD <- emmeans(Deer_cover_model_AD, pairwise ~ cues)
-summary(emmeans_cover_AD)
-plot(emmeans_cover_AD)
-pwpp(emmeans_cover_AD, sort = FALSE)
-
-library(multcompView)
-library(multcomp)
-cld_result_cover_AD <- cld(emmeans_cover_AD)
-print(cld_result_cover_AD)
-
-library(dplyr)
-# グループ名を数字からアルファベットに置き換え
-cld_result_cover_AD <- cld_result_cover_AD %>%
-  mutate(.group = case_when(
-    .group == " 1 " ~ "a",      
-    .group == "  2" ~ "b",       
-    .group == " 12" ~ "ab"
-  ))
-print(cld_result_cover_AD)
-
-cld_result_cover_AD <- cld_result_cover_AD %>%
-  mutate(color = ifelse(.group == "a", "blue", "black"))
-
-cld_result_cover_AD <-  cld_result_cover_AD %>%
-  mutate(cues = factor(cues, levels = c(
-    "human_vi", 
-    "human_vi_dog_vi",
-    "human_vi_dog_vi_ac",
-    "human_vi_dog_vi_cover",
-    "human_vi_dog_vi_ac_cover")))
-
-library(ggplot2)
-# プロット作成
-ggplot(cld_result_cover_AD, aes(x = cues, y = emmean, color = color)) +
-  geom_point(size = 8) +                                # 平均値の点
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.3, linewidth = 2.5) + 
-  geom_text(aes(label = .group), hjust = -1, size = 7) +  # グループラベルを追加
-  labs(
-    x = "Cues", 
-    y = "Estimated men value (m)", 
-    title = "Estimated mean values of AD"
-  ) +
-  theme_classic(base_size = 22) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_color_identity()
-
-
 
 
 #####
@@ -401,7 +216,7 @@ library(car)
 vif(lm(FID ~ cues + log(light + 1) + flock + noise + SD + AvgWind + season, data = Deer))
 
 #全変数の相関を確認
-vif(lm(FID ~ cues + weather + cloud + flock + AvgWind + MaxWind + noise + log(light + 1) + moon + season, data = Deer))
+vif(lm(FID ~ cues + weather + cloud + flock + AvgWind + MaxWind + noise + log(light + 1) + moon + season + day_or_night, data = Deer))
 
 
 library(emmeans)
