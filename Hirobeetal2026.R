@@ -62,7 +62,7 @@ write.csv(merged_data, "Hirobeetal2026.csv", row.names = FALSE)
 
 
 # Loaing the data ####
-merged_data <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_al_2026/refs/heads/main/Hirobeetal2026.csv?token=GHSAT0AAAAAADEK7CFDCCPD6JPCUMBONNCI2D4UJSQ")
+merged_data <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_al_2026/refs/heads/main/Hirobeetal2026.csv?token=GHSAT0AAAAAADEK7CFDP62XNCKVKYWRQFEE2D4U6VA")
 
 # NAを消す
 merged_data <- na.omit(merged_data)
@@ -81,7 +81,7 @@ merged_data$day_count <- as.numeric(difftime(merged_data$day, min_date, units = 
 head(merged_data)
 
 # 昼と夜を分ける
-merged_data$day_or_night <- ifelse(merged_data$time >= merger_data$sunrise & merged_data$time <= merged_data$sunset,
+merged_data$day_or_night <- ifelse(merged_data$time >= merged_data$sunrise & merged_data$time <= merged_data$sunset,
                                "day",
                                ifelse(merged_data$time > merged_data$sunset | merged_data$time < merged_data$sunrise,
                                       "night", NA))
@@ -149,12 +149,12 @@ print(head(merged_data))
 library(geosphere) 
 
 # サイト番号列
-Deer$site_number_core <- NA
-Deer$site_number_home <- NA
+merged_data$site_number_core <- NA
+merged_data$site_number_home <- NA
 
 library(sf)
 # Deerをsfオブジェクトに変換
-Deer_sf <- st_as_sf(Deer, coords = c("longitude", "latitude"), crs = 4326)
+Deer_sf <- st_as_sf(merged_data, coords = c("longitude", "latitude"), crs = 4326)
 Deer_utm <- st_transform(Deer_sf, crs = 32654)
 
 # Deerデータのバウンディングボックスを取得
@@ -177,11 +177,11 @@ unique_sites <- unique(na.omit(Deer_with_grid$grid_id))
 Deer_with_grid$grid_id <- match(Deer_with_grid$grid_id, unique_sites)
 
 # グリッドIDを site_number_home に割り当て
-Deer <- Deer %>% mutate(site_number_home = Deer_with_grid$grid_id)
+merged_data <- merged_data %>% mutate(site_number_home = Deer_with_grid$grid_id)
 Deer_with_grid <- Deer_with_grid %>% mutate(site_number_home = Deer_with_grid$grid_id)
 
 # 結果の確認
-print(Deer)
+print(merged_data)
 
 # プロット
 library(ggplot2)
@@ -198,17 +198,12 @@ ggplot() +
 library(lme4)
 library(Matrix)
 
-Deer <- subset(Deer, FID <= 150)
+Deer <- subset(merged_data, FID <= 150)
 Deer$log_light <- log((Deer$light)+1)
-
-# データの保存
-
-
-# githubからの読み込み
 
 
 # lmer()でGLMMを構築
-Deer_model <- glmer(
+Deer_model <- lmer(
   FID ~ cues + log_light + noise + SD  + flock + AvgWind + season + -1 +
     (1 | site_number_home),
   data = Deer
