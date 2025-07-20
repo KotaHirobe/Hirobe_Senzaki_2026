@@ -1,5 +1,5 @@
 # 音量減衰の確認 ####
-Soundlevel <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_al_2026/refs/heads/main/Hirobeetal2026AcousticAttenuation.csv?token=GHSAT0AAAAAADEK7CFD2EJY45BKS55A6UVW2D4UPQA")
+Soundlevel <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_al_2026/refs/heads/main/Hirobeetal2026AcousticAttenuation.csv")
 print(head(Soundlevel))
 
 library(ggplot2)
@@ -62,7 +62,7 @@ write.csv(merged_data, "Hirobeetal2026.csv", row.names = FALSE)
 
 
 # Loaing the data ####
-merged_data <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_al_2026/refs/heads/main/Hirobeetal2026.csv?token=GHSAT0AAAAAADEK7CFDP62XNCKVKYWRQFEE2D4U6VA")
+merged_data <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_al_2026/refs/heads/main/Hirobeetal2026.csv")
 
 # NAを消す
 merged_data <- na.omit(merged_data)
