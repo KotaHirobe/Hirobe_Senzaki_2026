@@ -56,6 +56,7 @@ FIDdata$time_num <- hour(FIDdata$time) + minute(FIDdata$time)/60
 
 
 # プロット位置データの読み込み ####
+# 最初にデータの読み込みと結合して、シカだけのデータにする
 site1 <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/site202408.csv")
 site2 <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/site20241006.csv")
 site3 <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/site20241013.csv")
@@ -183,6 +184,7 @@ ggplot() +
   theme_minimal()
 
 
+
 # LMM ####
 # 年をランダム効果に入れるべきか？
 library(lme4)
@@ -190,6 +192,12 @@ library(Matrix)
 
 Deer <- subset(Deer, FID <= 150)
 Deer$log_light <- log((Deer$light)+1)
+
+# データの保存
+
+
+# githubからの読み込み
+
 
 # lmer()でGLMMを構築
 Deer_model <- glmer(
