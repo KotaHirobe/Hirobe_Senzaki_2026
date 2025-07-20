@@ -20,7 +20,7 @@ ggplot(long_data, aes(x = dist, y = value, color = variable, group = variable)) 
 
 # データの作成は論文投稿時には削除予定
 # データの作成 ####
-library(lubridate)
+
 
 FIDdata <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/FIDdata.csv")
 
@@ -90,6 +90,7 @@ print(head(merged_data))
 table(merged_data$day_or_night)
 
 #時間データを小数にする
+library(lubridate)
 merged_data$time_num <- hour(merged_data$time) + minute(merged_data$time)/60
 
 
@@ -117,6 +118,7 @@ merged_data$site_number <- match(merged_data$site_number, unique_sites)
 
 ###
 #同じ種で150m離れていないかつ7日以上日付が空いていないデータの片方を省く
+library(dplyr)
 merged_data$day <- as.Date(merged_data$day)
 merged_data <- merged_data[order(merged_data$site_number, merged_data$number), ]
 
