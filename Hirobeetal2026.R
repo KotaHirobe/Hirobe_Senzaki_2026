@@ -20,13 +20,50 @@ ggplot(long_data, aes(x = dist, y = value, color = variable, group = variable)) 
 
 
 
-# データの読み込み ####
+# データの作成 ####
 library(lubridate)
 
 FIDdata <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/FIDdata.csv")
 
+# プロット位置データの読み込み
+site1 <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/site202408.csv")
+site2 <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/site20241006.csv")
+site3 <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/site20241013.csv")
+site4 <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/site20241127.csv")
+all_sites <- rbind(site1, site2, site3, site4)
+print(head(all_sites))
+
+# "名前"列から数字部分だけを抽出し、新しい列 "" を作成
+all_sites$number <- as.numeric(gsub("[^0-9]", "", all_sites$名前))
+
+
+# データの結合
+# "名前番号"列と "No"列で結合
+merged_data <- merge(all_sites, FIDdata, by.x = "number", by.y = "No")
+print(head(merged_data))
+
+#座標データの抽出
+merged_data$longitude <- as.numeric(sub("POINT \\(([^ ]+) .*", "\\1", merged_data$WKT))
+merged_data$latitude <- as.numeric(sub("POINT \\([^ ]+ ([^ ]+)\\)", "\\1", merged_data$WKT))
+
+#不要な行を削除
+library(dplyr)
+merged_data <- merged_data %>% dplyr::select(-説明, -照度1, -照度2, -照度3, -X, -X.1, -名前)
+
+# データ保存
+write.csv(merged_data, "Hirobeetal2026.csv", row.names = FALSE)
+
+
+
+
+
+
+
+# データの読み込み ####
+merged_data <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_al_2026/refs/heads/main/Hirobeetal2026.csv?token=GHSAT0AAAAAADEK7CFDCCPD6JPCUMBONNCI2D4UJSQ")
+
 # NAを消す
-FIDdata <- na.omit(FIDdata)
+merged_data <- na.omit(merged_data)
 
 # lightを数値として読み込み
 FIDdata$light <- as.numeric(FIDdata$light)
@@ -53,35 +90,6 @@ table(FIDdata$day_or_night)
 #時間データを小数にする
 FIDdata$time_num <- hour(FIDdata$time) + minute(FIDdata$time)/60
 
-
-
-# プロット位置データの読み込み ####
-# 最初にデータの読み込みと結合して、シカだけのデータにする
-site1 <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/site202408.csv")
-site2 <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/site20241006.csv")
-site3 <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/site20241013.csv")
-site4 <- read.csv("C:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/site20241127.csv")
-all_sites <- rbind(site1, site2, site3, site4)
-print(head(all_sites))
-
-# "名前"列から数字部分だけを抽出し、新しい列 "" を作成
-# 元データに日本語があるので、論部投稿時にはそれがなくなるようにする
-# 論文投稿時には整理されたシカのデータだけを読み込めるようにしとく
-all_sites$number <- as.numeric(gsub("[^0-9]", "", all_sites$名前))
-
-
-# データの結合 ####
-# "名前番号"列と "No"列で結合
-merged_data <- merge(all_sites, FIDdata, by.x = "number", by.y = "No")
-print(head(merged_data))
-
-#座標データの抽出
-merged_data$longitude <- as.numeric(sub("POINT \\(([^ ]+) .*", "\\1", merged_data$WKT))
-merged_data$latitude <- as.numeric(sub("POINT \\([^ ]+ ([^ ]+)\\)", "\\1", merged_data$WKT))
-
-#不要な行を削除
-library(dplyr)
-merged_data <- merged_data %>% dplyr::select(-説明, -照度1, -照度2, -照度3, -X, -X.1, soundNo.)
 
 
 
