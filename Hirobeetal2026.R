@@ -1,5 +1,5 @@
 # 音量減衰の確認 ####
-Soundlevel <- read.csv("c:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/dbalv.csv")
+Soundlevel <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_al_2026/refs/heads/main/Hirobeetal2026AcousticAttenuation.csv?token=GHSAT0AAAAAADEK7CFD2EJY45BKS55A6UVW2D4UPQA")
 print(head(Soundlevel))
 
 library(ggplot2)
@@ -49,6 +49,9 @@ merged_data$latitude <- as.numeric(sub("POINT \\([^ ]+ ([^ ]+)\\)", "\\1", merge
 library(dplyr)
 merged_data <- merged_data %>% dplyr::select(-説明, -照度1, -照度2, -照度3, -X, -X.1, -名前)
 
+# シカだけのデータにする
+merged_data <- subset(merged_data, species == "Deer")
+
 # データ保存
 write.csv(merged_data, "Hirobeetal2026.csv", row.names = FALSE)
 
@@ -65,29 +68,29 @@ merged_data <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_
 merged_data <- na.omit(merged_data)
 
 # lightを数値として読み込み
-FIDdata$light <- as.numeric(FIDdata$light)
+merged_data$light <- as.numeric(merged_data$light)
 
 # 日付(数値)を日時のデータに変換
-FIDdata$sunrise <- as.POSIXct(paste(FIDdata$day, FIDdata$sunrise))
-FIDdata$sunset <- as.POSIXct(paste(FIDdata$day, FIDdata$sunset))
-FIDdata$time <- as.POSIXct(paste(FIDdata$day, FIDdata$time))
+merged_data$sunrise <- as.POSIXct(paste(merged_data$day, merged_data$sunrise))
+merged_data$sunset <- as.POSIXct(paste(merged_data$day, merged_data$sunset))
+merged_data$time <- as.POSIXct(paste(merged_data$day, merged_data$time))
 
 # 日付を経過日数に変換
-min_date <- min(FIDdata$day, na.rm = TRUE)
-FIDdata$day_count <- as.numeric(difftime(FIDdata$day, min_date, units = "days")) +1
-head(FIDdata)
+min_date <- min(merged_data$day, na.rm = TRUE)
+merged_data$day_count <- as.numeric(difftime(merged_data$day, min_date, units = "days")) +1
+head(merged_data)
 
 # 昼と夜を分ける
-FIDdata$day_or_night <- ifelse(FIDdata$time >= FIDdata$sunrise & FIDdata$time <= FIDdata$sunset,
+merged_data$day_or_night <- ifelse(merged_data$time >= merger_data$sunrise & merged_data$time <= merged_data$sunset,
                                "day",
-                               ifelse(FIDdata$time > FIDdata$sunset | FIDdata$time < FIDdata$sunrise,
+                               ifelse(merged_data$time > merged_data$sunset | merged_data$time < merged_data$sunrise,
                                       "night", NA))
 
-print(head(FIDdata))
-table(FIDdata$day_or_night)
+print(head(merged_data))
+table(merged_data$day_or_night)
 
 #時間データを小数にする
-FIDdata$time_num <- hour(FIDdata$time) + minute(FIDdata$time)/60
+merged_data$time_num <- hour(merged_data$time) + minute(merged_data$time)/60
 
 
 
@@ -132,16 +135,14 @@ table(merged_data$species)
 merged_data <- merged_data %>%
   mutate(
     season = case_when(
-      format(day, "%m") %in% c("08", "09", "12", "05") ~ "NonBreeding",
-      format(day, "%m") %in% c("10", "11") ~ "Breeding"
+      format(day, "%m") %in% c("08", "09", "12", "05") ~ "NonMating",
+      format(day, "%m") %in% c("10", "11") ~ "Mating"
     )
   )
 
 print(head(merged_data))
 
 
-# 種ごとに分割
-Deer <- subset(merged_data, species == "Deer")
 
 
 #行動圏にあわせて番号を設定
