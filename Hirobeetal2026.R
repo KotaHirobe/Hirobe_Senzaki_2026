@@ -1,5 +1,4 @@
 # 音量減衰の確認 ####
-# 論文出すときにデータのソースコード書き換える
 Soundlevel <- read.csv("c:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ/dbalv.csv")
 print(head(Soundlevel))
 
@@ -19,7 +18,7 @@ ggplot(long_data, aes(x = dist, y = value, color = variable, group = variable)) 
   theme_classic(base_size = 22)
 
 
-
+# データの作成は論文投稿時には削除予定
 # データの作成 ####
 library(lubridate)
 
@@ -59,7 +58,7 @@ write.csv(merged_data, "Hirobeetal2026.csv", row.names = FALSE)
 
 
 
-# データの読み込み ####
+# Loaing the data ####
 merged_data <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_al_2026/refs/heads/main/Hirobeetal2026.csv?token=GHSAT0AAAAAADEK7CFDCCPD6JPCUMBONNCI2D4UJSQ")
 
 # NAを消す
