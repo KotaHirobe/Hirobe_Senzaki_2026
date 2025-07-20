@@ -357,7 +357,7 @@ print(cld_result_AD)
 # グループ名を数字からアルファベットに置き換え
 cld_result_AD <- cld_result_AD %>%
   mutate(.group = case_when(
-    .group == "1" ~ "a"
+    .group == " 1" ~ "a"
   ))
 print(cld_result_AD)
 
@@ -379,50 +379,16 @@ cld_result_AD <-  cld_result_AD %>%
 library(ggplot2)
 # プロット作成
 ggplot(cld_result_AD, aes(x = cues, y = emmean)) +
-  geom_point(size = 8) +                                # 平均値の点
+  geom_point(size = 8) +                                
   geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.3, linewidth = 2.5) + # エラーバー
-  geom_text(aes(label = .group), hjust = -1, size = 7) +  # グループラベルを追加
+  geom_text(aes(label = .group), hjust = -1, size = 7) +  
   labs(
     x = "Cues", 
     y = "Estimated mean value (m)", 
     title = "Estimated mean values of AD"
   ) +
   theme_classic(base_size = 22) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # x軸ラベルを45度傾ける
-
-#####
-# いらないところ
-# 明るさ横軸でcueごとの推定値をプロット
-library(ggeffects)
-library(viridis)
-library(emmeans)
-predicted_AD <- ggpredict(Deer_model_AD, terms = c("log_light", "cues"))
-ADslope <- lstrends(Deer_model_AD, ~cues, var = "log_light")
-summary(ADslope)
-
-custom_colors <- c(
-  "human_vi" = "blue",
-  "human_vi_ac" = "darkgreen",
-  "human_vi_ac_dog_vi" = "darkgreen",
-  "human_vi_dog_ac" = "#F0E442",
-  "human_vi_dog_vi" = "blue",
-  "human_vi_dog_vi_ac" = "darkgreen",
-  "human_vi_no" = "#999999",
-  "human_vi_no_dog_vi" = "#999999"
-)
-
-legend_order <- c(
-  "human_vi", "human_vi_dog_vi", "human_vi_ac", "human_vi_ac_dog_vi", "human_vi_dog_vi_ac", "human_vi_dog_ac", 
-  "human_vi_no", "human_vi_no_dog_vi"
-)
-
-ggplot(predicted_AD, aes(x = x, y = predicted, color = group, fill = group)) +
-  geom_line(size = 1) +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = group), alpha = 0.05, color = NA) +
-  labs(x = "明るさ", y = "ADの推定値", title = "明るさとADの関係") +
-  scale_color_manual(name = "Cues", values = custom_colors, limits = legend_order) +
-  scale_fill_manual(name = "Cues", values = custom_colors, limits = legend_order) +
-  theme_classic(base_size = 22)
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  
 
 
 #####
