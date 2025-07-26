@@ -271,20 +271,47 @@ cld_result_FID <-  cld_result_FID %>%
     "human_vi_dog_vi_ac_cover"
   )))
 
+cld_result_FID <- cld_result_FID %>%
+  mutate(auditory = case_when(
+    grepl("no", cues) ~ "White noise",
+    grepl("human_vi_ac", cues) ~ "Human",
+    grepl("dog_ac", cues) ~ "Dog",
+    grepl("dog_vi_ac", cues) ~ "Dog",
+    TRUE ~ "None"
+  ))
+
+shape_values <- c(
+  "White noise" = 17,
+  "Human" = 15,
+  "Dog" = 18,
+  "None" = 16
+)
+
+color_values <- c(
+  "White noise" = "#E69F00",
+  "Human" = "#56B4E9",
+  "Dog" = "#009E73",
+  "None" = "#999999"
+)
+
 library(ggplot2)
 # プロット作成
-ggplot(cld_result_FID, aes(x = cues, y = emmean)) +
-  geom_point(size = 8) +                                
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.3, linewidth = 2.5) + 
-  geom_text(aes(label = .group), hjust = -1, size = 7) +  
+# 1600*900で出力
+ggplot(cld_result_FID, aes(x = cues, y = emmean, shape = auditory, color = auditory)) +
+  geom_point(size = 6) +                                
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, linewidth = 2) + 
+  geom_text(aes(label = .group), hjust = -0.7, size = 7, show.legend = FALSE) +  
   labs(
-    x = "Cues", 
+    x = NULL, 
     y = "Estimated mean value (m)", 
-    title = "Estimated mean values of FID"
+    shape = "acoustic cues",
+    color = "acoustic cues"
   ) +
   theme_classic(base_size = 22) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_color_identity()
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  scale_color_manual(values = color_values) +
+  scale_shape_manual(values = shape_values)
 
 
 # 信頼区間を計算
@@ -308,12 +335,13 @@ results <- results %>%
 
 
 results <- results %>%
-  mutate(color = ifelse(lwr > 0, "orange", "black"))
+  mutate(color = ifelse(lwr > 0, "#D55E00", "black"))
 
+# 800*500で作成
 ggplot(results, aes(x = estimate, y = term, color = color)) +
   geom_point(size = 5) +  
   geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  
-  labs(title = "Factors affecting FID",
+  labs(
        y = "Explanatory variables",
        x = "Estimated coefficients") +
   geom_vline(xintercept = 0, linetype = "dotted") +
@@ -380,20 +408,34 @@ cld_result_AD <-  cld_result_AD %>%
     "human_vi_dog_vi_ac_cover"
   )))
 
+cld_result_AD <- cld_result_AD %>%
+  mutate(auditory = case_when(
+    grepl("no", cues) ~ "White noise",
+    grepl("human_vi_ac", cues) ~ "Human",
+    grepl("dog_ac", cues) ~ "Dog",
+    grepl("dog_vi_ac", cues) ~ "Dog",
+    TRUE ~ "None"
+  ))
+
 
 library(ggplot2)
 # プロット作成
-ggplot(cld_result_AD, aes(x = cues, y = emmean)) +
-  geom_point(size = 8) +                                
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.3, linewidth = 2.5) + # エラーバー
-  geom_text(aes(label = .group), hjust = -1, size = 7) +  
+# 1600*900で出力
+ggplot(cld_result_AD, aes(x = cues, y = emmean, shape = auditory, color = auditory)) +
+  geom_point(size = 6) +                                
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, linewidth = 2) + 
+  geom_text(aes(label = .group), hjust = -0.7, size = 7, show.legend = FALSE) +  
   labs(
-    x = "Cues", 
+    x = NULL, 
     y = "Estimated mean value (m)", 
-    title = "Estimated mean values of AD"
+    shape = "acoustic cues",
+    color = "acoustic cues"
   ) +
   theme_classic(base_size = 22) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))  
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  scale_color_manual(values = color_values) +
+  scale_shape_manual(values = shape_values)
 
 
 #####
@@ -422,20 +464,20 @@ results_AD <- results_AD %>%
   filter(!grepl("cues", term))
 
 results_AD <- results_AD %>%
-  mutate(color = ifelse(lwr > 0, "orange", "black"))
+  mutate(color = ifelse(lwr > 0, "#D55E00", "black"))
 
-
+# 800*500
 ggplot(results_AD, aes(x = estimate, y = term, color = color)) +
   geom_point(size = 5) +  
   geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  # 信頼区間
-  labs(title = "Factors affecting AD",
+  labs(
        y = "Explanatory variables",
        x = "Estimated coefficients") +
   geom_vline(xintercept = 0, linetype = "dotted") +
   coord_cartesian(xlim = c(-8, 18)) +
   theme_classic(base_size = 22) +
   scale_y_discrete(
-    labels = c("log(light + 1)" = "Light",
+    labels = c("log_light" = "Light",
                "seasonNonBreeding" = "Postmating season",
                "SD" = "Start distance",
                "noise" = "Equivalent noise",
