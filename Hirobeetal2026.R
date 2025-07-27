@@ -198,7 +198,12 @@ ggplot() +
   labs(color = "Site Number", title = "5000x5000m Grid Clustering") +
   theme_minimal()
 
+# 相関係数
+cor_vars <- Deer %>%
+  dplyr::select(where(is.numeric))
 
+cor_matrix <- cor(cor_vars, use = "complete.obs", method = "pearson")
+print(cor_matrix)
 
 # LMM ####
 # 年をランダム効果に入れるべきか？
@@ -209,9 +214,9 @@ Deer <- subset(merged_data, FID <= 150)
 Deer$log_light <- log((Deer$light)+1)
 
 
-# lmer()でGLMMを構築
+# lmer()でLMMを構築
 Deer_model <- lmer(
-  FID ~ cues + log_light + noise + SD  + flock + AvgWind + season + -1 +
+  FID ~ cues + log_light + noise + SD  + flock + AvgWind + season +
     (1 | site_number_home),
   data = Deer
 )
@@ -227,7 +232,6 @@ print(model_r2)
 library(car)
 vif(lm(FID ~ cues + log(light + 1) + flock + noise + SD + AvgWind + season, data = Deer))
 vif(lm(FID ~ cues + weather + cloud + flock + AvgWind + MaxWind + noise + log(light + 1) + moon + season + day_or_night, data = Deer))
-
 
 
 library(emmeans)
@@ -330,15 +334,15 @@ results <- data.frame(
 results <- na.omit(results)
 
 # cuesに関する行を除外
-results <- results %>%
-  filter(!grepl("cues", term))
+results_f <- results %>%
+  filter(!grepl("cues", term), term != "(Intercept)")
 
 
-results <- results %>%
+results_f <- results_f %>%
   mutate(color = ifelse(lwr > 0, "#D55E00", "black"))
 
 # 800*500で作成
-ggplot(results, aes(x = estimate, y = term, color = color)) +
+ggplot(results_f, aes(x = estimate, y = term, color = color)) +
   geom_point(size = 5) +  
   geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  
   labs(
@@ -356,6 +360,68 @@ ggplot(results, aes(x = estimate, y = term, color = color)) +
                "AvgWind" = "Average wind speed")
   ) +
   scale_color_identity()
+
+# 切片との比較にして、カテゴリの効果量は推定値から解釈
+results_cues <- results %>%
+  filter(grepl("cues", term))
+
+results_cues <-  results_cues %>%
+  mutate(
+    term = gsub("^cues", "", term))
+    
+results_cues <- results_cues %>%
+  mutate(term = factor(term, levels = c(
+    "human_vi_ac",
+    "human_vi_dog_ac",
+    "human_vi_no",
+    "human_vi_dog_vi",
+    "human_vi_ac_dog_vi",
+    "human_vi_dog_vi_ac",
+    "human_vi_no_dog_vi",
+    "human_vi_dog_vi_cover",
+    "human_vi_dog_vi_ac_cover"
+  )))
+print(results_cues)
+
+results_cues <- results_cues %>%
+  mutate(auditory = case_when(
+    grepl("no", term) ~ "White noise",
+    grepl("human_vi_ac", term) ~ "Human",
+    grepl("dog_ac", term) ~ "Dog",
+    grepl("dog_vi_ac", term) ~ "Dog",
+    TRUE ~ "None"
+  ))
+
+shape_values <- c(
+  "White noise" = 17,
+  "Human" = 15,
+  "Dog" = 18,
+  "None" = 16
+)
+
+color_values <- c(
+  "White noise" = "#E69F00",
+  "Human" = "#56B4E9",
+  "Dog" = "#009E73",
+  "None" = "#999999"
+)
+
+
+ggplot(results_cues, aes(x = term, y = estimate, shape = auditory, color = auditory)) +
+  geom_point(size = 5) +  
+  geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.3, linewidth = 2) +  
+  labs(
+    x = NULL,
+    y = "Estimated coefficients") +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  theme_classic(base_size = 22)+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  scale_color_manual(values = color_values) +
+  scale_shape_manual(values = shape_values)
+
+
+
 
 
 # AD ####
