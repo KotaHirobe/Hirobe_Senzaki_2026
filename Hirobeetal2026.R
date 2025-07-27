@@ -206,7 +206,6 @@ cor_matrix <- cor(cor_vars, use = "complete.obs", method = "pearson")
 print(cor_matrix)
 
 # LMM ####
-# 年をランダム効果に入れるべきか？
 library(lme4)
 library(Matrix)
 
