@@ -312,7 +312,7 @@ ggplot(results_f, aes(x = estimate, y = term, color = color)) +
        y = "Explanatory variables",
        x = "Estimated coefficients") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-7, 17)) +
+  coord_cartesian(xlim = c(-40, 40)) +
   theme_classic(base_size = 22) +
   scale_y_discrete(
     labels = c("noise_acoustic" = "White noise",
@@ -386,7 +386,7 @@ ggplot(results_AD_f, aes(x = estimate, y = term, color = color)) +
     y = "Explanatory variables",
     x = "Estimated coefficients") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-7, 17)) +
+  coord_cartesian(xlim = c(-40, 40)) +
   theme_classic(base_size = 22) +
   scale_y_discrete(
     labels = c("noise_acoustic" = "White noise",
