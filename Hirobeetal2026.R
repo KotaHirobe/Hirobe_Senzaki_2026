@@ -235,7 +235,7 @@ vif(lm(FID ~ cues + weather + cloud + flock + AvgWind + MaxWind + noise + log(li
 
 
 library(emmeans)
-# 多重比較
+# 多重比較 ####
 emmeans_FID <- emmeans(Deer_model, pairwise ~ cues)
 summary(emmeans_FID)
 plot(emmeans_FID)
@@ -318,7 +318,7 @@ ggplot(cld_result_FID, aes(x = cues, y = emmean, shape = auditory, color = audit
   scale_shape_manual(values = shape_values)
 
 
-# 信頼区間を計算
+# 信頼区間を計算 ####
 conf_intervals_Deer <- confint(Deer_model)
 conf_intervals_Deer <- conf_intervals_Deer[!rownames(conf_intervals_Deer) %in% c(".sig01", ".sig02",  ".sigma"), ]
 estimates <- summary(Deer_model)$coefficients
@@ -426,7 +426,7 @@ ggplot(results_cues, aes(x = term, y = estimate, shape = auditory, color = audit
 
 # AD ####
 Deer_model_AD <- lmer(
-  AD ~ cues + log_light + noise + flock + SD + AvgWind + season + -1 +
+  AD ~ cues + log_light + noise + flock + SD + AvgWind + season +
     (1 | site_number_home),
   data = Deer
 )
@@ -439,7 +439,7 @@ model_AD_r2 <- r2_nakagawa(Deer_model_AD)
 print(model_AD_r2)
 
 
-# emmeans
+# emmeans ####
 library(emmeans)
 
 # 多重比較
@@ -504,8 +504,7 @@ ggplot(cld_result_AD, aes(x = cues, y = emmean, shape = auditory, color = audito
   scale_shape_manual(values = shape_values)
 
 
-#####
-# 推定値の信頼区間を計算
+# 推定値の信頼区間を計算 ####
 conf_intervals_Deer_AD <- confint(Deer_model_AD)
 # 不必要な行を除外
 conf_intervals_Deer_AD <- conf_intervals_Deer_AD[!rownames(conf_intervals_Deer_AD) %in% c(".sig01", ".sig02",  ".sigma"), ]
@@ -526,14 +525,14 @@ results_AD <- data.frame(
 results_AD <- na.omit(results_AD)
 
 # cuesに関する行を除外
-results_AD <- results_AD %>%
-  filter(!grepl("cues", term))
+results_AD_f <- results_AD %>%
+  filter(!grepl("cues", term), term != "(Intercept)")
 
-results_AD <- results_AD %>%
+results_AD_f <- results_AD_f %>%
   mutate(color = ifelse(lwr > 0, "#D55E00", "black"))
 
 # 800*500
-ggplot(results_AD, aes(x = estimate, y = term, color = color)) +
+ggplot(results_AD_f, aes(x = estimate, y = term, color = color)) +
   geom_point(size = 5) +  
   geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  # 信頼区間
   labs(
@@ -553,6 +552,64 @@ ggplot(results_AD, aes(x = estimate, y = term, color = color)) +
   scale_color_identity()
 
 
+# 切片との比較にして、カテゴリの効果量は推定値から解釈
+results_AD_cues <- results_AD %>%
+  filter(grepl("cues", term))
+
+results_AD_cues <-  results_AD_cues %>%
+  mutate(
+    term = gsub("^cues", "", term))
+
+results_AD_cues <- results_AD_cues %>%
+  mutate(term = factor(term, levels = c(
+    "human_vi_ac",
+    "human_vi_dog_ac",
+    "human_vi_no",
+    "human_vi_dog_vi",
+    "human_vi_ac_dog_vi",
+    "human_vi_dog_vi_ac",
+    "human_vi_no_dog_vi",
+    "human_vi_dog_vi_cover",
+    "human_vi_dog_vi_ac_cover"
+  )))
+print(results_AD_cues)
+
+results_AD_cues <- results_AD_cues %>%
+  mutate(auditory = case_when(
+    grepl("no", term) ~ "White noise",
+    grepl("human_vi_ac", term) ~ "Human",
+    grepl("dog_ac", term) ~ "Dog",
+    grepl("dog_vi_ac", term) ~ "Dog",
+    TRUE ~ "None"
+  ))
+
+shape_values <- c(
+  "White noise" = 17,
+  "Human" = 15,
+  "Dog" = 18,
+  "None" = 16
+)
+
+color_values <- c(
+  "White noise" = "#E69F00",
+  "Human" = "#56B4E9",
+  "Dog" = "#009E73",
+  "None" = "#999999"
+)
+
+
+ggplot(results_AD_cues, aes(x = term, y = estimate, shape = auditory, color = auditory)) +
+  geom_point(size = 5) +  
+  geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.3, linewidth = 2) +  
+  labs(
+    x = NULL,
+    y = "Estimated coefficients") +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  theme_classic(base_size = 22)+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  scale_color_manual(values = color_values) +
+  scale_shape_manual(values = shape_values)
 
 
 
