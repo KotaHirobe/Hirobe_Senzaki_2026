@@ -205,8 +205,8 @@ cor_vars <- Deer %>%
 cor_matrix <- cor(cor_vars, use = "complete.obs", method = "pearson")
 print(cor_matrix)
 
+
 # LMM ####
-# 年をランダム効果に入れるべきか？
 library(lme4)
 library(Matrix)
 
@@ -251,7 +251,7 @@ Deer <- Deer %>%
 
 # lmer()でLMMを構築
 Deer_model <- lmer(
-  FID ~ dog_visual + blinddog_visual + human_acoustic + dog_acoustic + noise_acoustic + log_light + noise + SD  + flock + AvgWind + season + 
+  FID ~ dog_visual + blinddog_visual + dog_visual*human_acoustic + dog_visual*dog_acoustic + noise_acoustic + log_light + SD  + flock + AvgWind + season +
     (1 | site_number_home),
   data = Deer
 )
@@ -264,9 +264,9 @@ library(performance)
 model_r2 <- r2_nakagawa(Deer_model)
 print(model_r2)
 
+# 相関も確認する
 library(car)
-vif(lm(FID ~ cues + log(light + 1) + flock + noise + SD + AvgWind + season, data = Deer))
-vif(lm(FID ~ cues + weather + cloud + flock + AvgWind + MaxWind + noise + log(light + 1) + moon + season + day_or_night, data = Deer))
+vif(lm(FID ~ dog_visual + blinddog_visual + dog_visual*human_acoustic + dog_visual*dog_acoustic + noise_acoustic + log_light + noise + SD  + flock + AvgWind + season, data = Deer))
 
 # 信頼区間を計算 ####
 conf_intervals_Deer <- confint(Deer_model)
@@ -301,6 +301,8 @@ results_f <- results_f %>%
     "human_acoustic",
     "blinddog_visual",
     "dog_visual",
+    "dog_visual:human_acoustic",
+    "dog_visual:dog_acoustic",
     "(Intercept)"
   )))
 
@@ -329,13 +331,21 @@ ggplot(results_f, aes(x = estimate, y = term, color = color)) +
 
 # AD ####
 Deer_model_AD <- lmer(
-  AD ~ dog_visual + blinddog_visual + human_acoustic + dog_acoustic + noise_acoustic + log_light + noise + SD  + flock + AvgWind + season + 
+  AD ~ dog_visual + blinddog_visual + dog_visual*human_acoustic + dog_visual*dog_acoustic + noise_acoustic + log_light + SD + flock + AvgWind + season + 
     (1 | site_number_home),
   data = Deer
 )
 # 結果の確認
 summary(Deer_model_AD)
 
+# 相互作用項の確認
+X <- model.matrix(Deer_model_AD)
+
+cor_AD <- cor(X)
+print(cor_AD)
+
+X_interaction <- X[, "dog_visual:dog_acoustic"]
+print(X_interaction)
 
 library(performance)
 # 決定係数の確認
@@ -375,6 +385,8 @@ results_AD_f <- results_AD_f %>%
     "human_acoustic",
     "blinddog_visual",
     "dog_visual",
+    "dog_visual:human_acoustic",
+    "dog_visual:dog_acoustic",
     "(Intercept)"
   )))
 
