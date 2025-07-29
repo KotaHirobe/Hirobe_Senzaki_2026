@@ -216,42 +216,42 @@ Deer$log_light <- log((Deer$light)+1)
 # cuesを分解して個別の変数に
 Deer <- Deer %>%
   mutate(
-    human_visual = ifelse(cues %in% c(
+    human_visual = factor(ifelse(cues %in% c(
       "human_vi", "human_vi_ac", "human_vi_dog_ac", "human_vi_no",
       "human_vi_dog_vi", "human_vi_ac_dog_vi", "human_vi_dog_vi_ac",
       "human_vi_no_dog_vi", "human_vi_dog_vi_cover", "human_vi_dog_vi_ac_cover"
-    ), 1, 0),
+    ), 1, 0)),
     
-    dog_visual = ifelse(cues %in% c(
+    dog_visual = factor(ifelse(cues %in% c(
       "human_vi_dog_vi", "human_vi_ac_dog_vi",
       "human_vi_dog_vi_ac", "human_vi_no_dog_vi"
-    ), 1, 0),
+    ), 1, 0)),
     
-    blinddog_visual = ifelse(cues %in% c(
+    blinddog_visual = factor(ifelse(cues %in% c(
       "human_vi_dog_vi_cover", "human_vi_dog_vi_ac_cover"
-    ), 1, 0),
+    ), 1, 0)),
     
-    human_acoustic = ifelse(cues %in% c(
+    human_acoustic = factor(ifelse(cues %in% c(
       "human_vi_ac", "human_vi_ac_dog_vi"
-    ), 1, 0),
+    ), 1, 0)),
     
-    dog_acoustic = ifelse(cues %in% c(
+    dog_acoustic = factor(ifelse(cues %in% c(
       "human_vi_dog_vi_ac", "human_vi_dog_ac", "human_vi_dog_vi_ac_cover"
-    ), 1, 0),
+    ), 1, 0)),
     
-    noise_acoustic = ifelse(cues %in% c(
+    noise_acoustic = factor(ifelse(cues %in% c(
       "human_vi_no", "human_vi_no_dog_vi"
-    ), 1, 0),
+    ), 1, 0)),
     
-    no_acoustic = ifelse(cues %in% c(
+    no_acoustic = factor(ifelse(cues %in% c(
       "human_vi", "human_vi_dog_vi", "human_vi_dog_vi_cover"
-    ), 1, 0)
+    ), 1, 0))
   )
 
 
 # lmer()でLMMを構築
 Deer_model <- lmer(
-  FID ~ dog_visual + blinddog_visual + dog_visual*human_acoustic + dog_visual*dog_acoustic + noise_acoustic + log_light + SD  + flock + AvgWind + season +
+  FID ~ dog_visual + blinddog_visual + human_acoustic + dog_acoustic + dog_visual:human_acoustic + dog_visual:dog_acoustic + noise_acoustic + log_light + SD + flock + AvgWind + season + 
     (1 | site_number_home),
   data = Deer
 )
@@ -296,13 +296,13 @@ results_f <- results_f %>%
     "SD",
     "noise",
     "log_light",
-    "noise_acoustic",
-    "dog_acoustic",
-    "human_acoustic",
-    "blinddog_visual",
-    "dog_visual",
-    "dog_visual:human_acoustic",
-    "dog_visual:dog_acoustic",
+    "noise_acoustic1",
+    "dog_acoustic1",
+    "human_acoustic1",
+    "blinddog_visual1",
+    "dog_visual1",
+    "dog_visual1:human_acoustic1",
+    "dog_visual1:dog_acoustic1",
     "(Intercept)"
   )))
 
@@ -331,7 +331,7 @@ ggplot(results_f, aes(x = estimate, y = term, color = color)) +
 
 # AD ####
 Deer_model_AD <- lmer(
-  AD ~ dog_visual + blinddog_visual + dog_visual*human_acoustic + dog_visual*dog_acoustic + noise_acoustic + log_light + SD + flock + AvgWind + season + 
+  AD ~ dog_visual + blinddog_visual + human_acoustic + dog_acoustic + dog_visual:human_acoustic + dog_visual:dog_acoustic + noise_acoustic + log_light + SD + flock + AvgWind + season + 
     (1 | site_number_home),
   data = Deer
 )
@@ -340,12 +340,11 @@ summary(Deer_model_AD)
 
 # 相互作用項の確認
 X <- model.matrix(Deer_model_AD)
-
-cor_AD <- cor(X)
-print(cor_AD)
-
-X_interaction <- X[, "dog_visual:dog_acoustic"]
+X_interaction <- X[, "dog_visual1:human_acoustic1"]
 print(X_interaction)
+
+Deer_with_interaction <- cbind(Deer, interaction_value = X_interaction)
+View(Deer_with_interaction)
 
 library(performance)
 # 決定係数の確認
@@ -380,13 +379,13 @@ results_AD_f <- results_AD_f %>%
     "SD",
     "noise",
     "log_light",
-    "noise_acoustic",
-    "dog_acoustic",
-    "human_acoustic",
-    "blinddog_visual",
-    "dog_visual",
-    "dog_visual:human_acoustic",
-    "dog_visual:dog_acoustic",
+    "noise_acoustic1",
+    "dog_acoustic1",
+    "human_acoustic1",
+    "blinddog_visual1",
+    "dog_visual1",
+    "dog_visual1:human_acoustic1",
+    "dog_visual1:dog_acoustic1",
     "(Intercept)"
   )))
 
