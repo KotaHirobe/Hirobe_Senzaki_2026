@@ -268,7 +268,7 @@ print(model_r2)
 library(car)
 vif(lm(FID ~ dog_visual + blinddog_visual + dog_visual*human_acoustic + dog_visual*dog_acoustic + noise_acoustic + log_light + noise + SD  + flock + AvgWind + season, data = Deer))
 
-# 信頼区間を計算 ####
+# 信頼区間を計算
 conf_intervals_Deer <- confint(Deer_model)
 conf_intervals_Deer <- conf_intervals_Deer[!rownames(conf_intervals_Deer) %in% c(".sig01", ".sig02",  ".sigma"), ]
 estimates <- summary(Deer_model)$coefficients
@@ -296,13 +296,13 @@ results_f <- results_f %>%
     "SD",
     "noise",
     "log_light",
+    "dog_visual1:human_acoustic1",
+    "dog_visual1:dog_acoustic1",
     "noise_acoustic1",
     "dog_acoustic1",
     "human_acoustic1",
     "blinddog_visual1",
     "dog_visual1",
-    "dog_visual1:human_acoustic1",
-    "dog_visual1:dog_acoustic1",
     "(Intercept)"
   )))
 
@@ -317,11 +317,17 @@ ggplot(results_f, aes(x = estimate, y = term, color = color)) +
   coord_cartesian(xlim = c(-40, 40)) +
   theme_classic(base_size = 22) +
   scale_y_discrete(
-    labels = c("noise_acoustic" = "White noise",
-               "log_light" = "Light",
-               "seasonNonBreeding" = "Postmating season",
+    labels = c("noise_acoustic1" = "White noise",
+               "dog_visual1" = "Dog visual cue",
+               "blinddog_visual1" = "Covered dog visual cue",
+               "human_acoustic1" = "Human acoustic cue",
+               "dog_acoustic1" = "Dog acoustic cue",
+               "dog_visual1:dog_acoustic1" = "Interaction between dog visual and dog acoustic cue",
+               "dog_visual1:human_acoustic1" = "Interaction between dog visual and human acoustic cue",
+               "log_light" = "Ambient light level",
+               "seasonNonMating" = "Postmating season",
                "SD" = "Start distance",
-               "noise" = "Equivalent noise",
+               "noise" = "Environmental noise",
                "flock" = "Flock size",
                "AvgWind" = "Average wind speed")
   ) +
@@ -351,7 +357,7 @@ library(performance)
 model_r2_AD <- r2_nakagawa(Deer_model_AD)
 print(model_r2_AD)
 
-# 信頼区間を計算 ####
+# 信頼区間を計算 
 conf_intervals_Deer_AD <- confint(Deer_model_AD)
 conf_intervals_Deer_AD <- conf_intervals_Deer_AD[!rownames(conf_intervals_Deer_AD) %in% c(".sig01", ".sig02",  ".sigma"), ]
 estimates_AD <- summary(Deer_model_AD)$coefficients
@@ -379,13 +385,13 @@ results_AD_f <- results_AD_f %>%
     "SD",
     "noise",
     "log_light",
+    "dog_visual1:human_acoustic1",
+    "dog_visual1:dog_acoustic1",
     "noise_acoustic1",
     "dog_acoustic1",
     "human_acoustic1",
     "blinddog_visual1",
     "dog_visual1",
-    "dog_visual1:human_acoustic1",
-    "dog_visual1:dog_acoustic1",
     "(Intercept)"
   )))
 
@@ -400,11 +406,17 @@ ggplot(results_AD_f, aes(x = estimate, y = term, color = color)) +
   coord_cartesian(xlim = c(-40, 40)) +
   theme_classic(base_size = 22) +
   scale_y_discrete(
-    labels = c("noise_acoustic" = "White noise",
-               "log_light" = "Light",
-               "seasonNonBreeding" = "Postmating season",
+    labels = c("noise_acoustic1" = "White noise",
+               "dog_visual1" = "Dog visual cue",
+               "blinddog_visual1" = "Covered dog visual cue",
+               "human_acoustic1" = "Human acoustic cue",
+               "dog_acoustic1" = "Dog acoustic cue",
+               "dog_visual1:dog_acoustic1" = "Interaction between dog visual and dog acoustic cue",
+               "dog_visual1:human_acoustic1" = "Interaction between dog visual and human acoustic cue",
+               "log_light" = "Ambient light level",
+               "seasonNonMating" = "Postmating season",
                "SD" = "Start distance",
-               "noise" = "Equivalent noise",
+               "noise" = "Environmental noise",
                "flock" = "Flock size",
                "AvgWind" = "Average wind speed")
   ) +
