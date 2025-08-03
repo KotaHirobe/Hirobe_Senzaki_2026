@@ -266,7 +266,8 @@ print(model_r2)
 
 # 相関も確認する
 library(car)
-vif(lm(FID ~ dog_visual + blinddog_visual + dog_visual*human_acoustic + dog_visual*dog_acoustic + noise_acoustic + log_light + noise + SD  + flock + AvgWind + season, data = Deer))
+vif(lm(FID ~ day_or_night + dog_visual + blinddog_visual + dog_visual*human_acoustic + dog_visual*dog_acoustic + noise_acoustic + log_light + noise + SD  + flock + AvgWind + season, data = Deer))
+
 
 # 信頼区間を計算
 conf_intervals_Deer <- confint(Deer_model)
