@@ -316,7 +316,7 @@ ggplot(results_f, aes(x = estimate, y = term, color = color)) +
        x = "Estimated coefficients") +
   geom_vline(xintercept = 0, linetype = "dotted") +
   coord_cartesian(xlim = c(-40, 40)) +
-  theme_classic(base_size = 22) +
+  theme_classic(base_size = 32) +
   scale_y_discrete(
     labels = c("noise_acoustic1" = "White noise",
                "dog_visual1" = "Dog visual cue",
@@ -405,7 +405,7 @@ ggplot(results_AD_f, aes(x = estimate, y = term, color = color)) +
     x = "Estimated coefficients") +
   geom_vline(xintercept = 0, linetype = "dotted") +
   coord_cartesian(xlim = c(-40, 40)) +
-  theme_classic(base_size = 22) +
+  theme_classic(base_size = 32) +
   scale_y_discrete(
     labels = c("noise_acoustic1" = "White noise",
                "dog_visual1" = "Dog visual cue",
