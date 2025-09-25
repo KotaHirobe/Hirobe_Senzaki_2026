@@ -644,3 +644,13 @@ ggplot(data, aes(y = Estimate, x = Pattern, ymin = LowerCI, ymax = UpperCI)) +
   theme(
     legend.position = "none" 
   )
+
+# 平均と標準偏差の描画
+library(dplyr)
+
+Deer %>%
+  summarise(
+    across(c(flock, AvgWind, MaxWind, noise, light),
+           list(mean = mean, sd = sd), 
+           na.rm = TRUE)
+  )
