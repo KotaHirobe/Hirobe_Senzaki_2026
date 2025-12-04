@@ -67,7 +67,7 @@ write.csv(merged_data, "Hirobeetal2026.csv", row.names = FALSE)
 # Loaing the data ####
 merged_data <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_al_2026/refs/heads/main/Hirobeetal2026.csv")
 # ローカルから読み込む用
-merged_data <- read.csv("Hirobeetal2026.csv")
+merged_data <- read.csv("Hirobeetal2026.csv", colClasses = c(actime = "character"))
 
 # NAを消す
 merged_data <- na.omit(merged_data)
@@ -247,6 +247,24 @@ Deer <- Deer %>%
       "human_vi", "human_vi_dog_vi", "human_vi_dog_vi_cover"
     ), 1, 0))
   )
+
+# 予備解析：プレイバックの有音時間の違いによるFIDの変化がないか検証
+deer_prep <- Deer[Deer$human_acoustic == 1,]
+deer_prep$actime <- as.numeric(deer_prep$actime)
+
+prep_deer_model <- lm(
+  FID ~ log_light + SD + flock + AvgWind + season + actime,
+  data = deer_prep
+)
+# 結果の確認
+summary(prep_deer_model)
+
+prep_AD <- lm(
+  AD ~ log_light + SD + flock + AvgWind + season + actime,
+  data = deer_prep
+)
+# 結果の確認
+summary(prep_AD)
 
 
 # lmer()でLMMを構築
