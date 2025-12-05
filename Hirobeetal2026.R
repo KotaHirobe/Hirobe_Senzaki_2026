@@ -353,6 +353,19 @@ ggplot(results_f, aes(x = estimate, y = term, color = color)) +
   scale_color_identity()
 
 
+# emmeansでFIDの推定値出す
+
+
+
+
+
+
+
+
+
+
+
+
 
 # AD ####
 Deer_model_AD <- lmer(
