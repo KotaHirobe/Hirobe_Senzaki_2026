@@ -266,6 +266,19 @@ prep_AD <- lm(
 # 結果の確認
 summary(prep_AD)
 
+library(dplyr)
+
+Deer <- Deer %>%
+  mutate(
+    dog_visual      = factor(dog_visual,      levels = c(0, 1)),
+    blinddog_visual = factor(blinddog_visual, levels = c(0, 1)),
+    human_acoustic  = factor(human_acoustic,  levels = c(0, 1)),
+    dog_acoustic    = factor(dog_acoustic,    levels = c(0, 1)),
+    noise_acoustic  = factor(noise_acoustic,  levels = c(0, 1))
+  )
+
+Deer$season <- factor(Deer$season)  
+
 
 # lmer()でLMMを構築
 Deer_model <- lmer(
@@ -353,10 +366,93 @@ ggplot(results_f, aes(x = estimate, y = term, color = color)) +
   scale_color_identity()
 
 
-# emmeansでFIDの推定値出す
+# FIDの推定値出す
+library(emmeans)
+
+emmeans_FID <- emmeans(
+  Deer_model,
+  ~ dog_visual * blinddog_visual * human_acoustic * dog_acoustic * noise_acoustic)
+
+plot(emmeans_FID)
+emm_df <- as.data.frame(emmeans_FID)
 
 
+sub_8 <- subset(
+  emm_df,
+  # 1) Intercept: 全部 "0"
+  (dog_visual == "0" & blinddog_visual == "0" & human_acoustic == "0" &
+     dog_acoustic == "0" & noise_acoustic == "0") |
+    # 2) dog_visual1: dog_visual="1"のみ
+    (dog_visual == "1" & blinddog_visual == "0" & human_acoustic == "0" &
+       dog_acoustic == "0" & noise_acoustic == "0") |
+    # 3) blinddog_visual1
+    (dog_visual == "0" & blinddog_visual == "1" & human_acoustic == "0" &
+       dog_acoustic == "0" & noise_acoustic == "0") |
+    # 4) human_acoustic1
+    (dog_visual == "0" & blinddog_visual == "0" & human_acoustic == "1" &
+       dog_acoustic == "0" & noise_acoustic == "0") |
+    # 5) dog_acoustic1
+    (dog_visual == "0" & blinddog_visual == "0" & human_acoustic == "0" &
+       dog_acoustic == "1" & noise_acoustic == "0") |
+    # 6) noise_acoustic1
+    (dog_visual == "0" & blinddog_visual == "0" & human_acoustic == "0" &
+       dog_acoustic == "0" & noise_acoustic == "1") |
+    # 7) dog_visual1:human_acoustic1
+    (dog_visual == "1" & blinddog_visual == "0" & human_acoustic == "1" &
+       dog_acoustic == "0" & noise_acoustic == "0") |
+    # 8) dog_visual1:dog_acoustic1
+    (dog_visual == "1" & blinddog_visual == "0" & human_acoustic == "0" &
+       dog_acoustic == "1" & noise_acoustic == "0")
+)
 
+library(dplyr)
+
+sub_8 <- sub_8 %>%
+  mutate(
+    scenario = case_when(
+      dog_visual == "0" & blinddog_visual == "0" & human_acoustic == "0" &
+        dog_acoustic == "0" & noise_acoustic == "0" ~ "Intercept",
+      dog_visual == "1" & blinddog_visual == "0" & human_acoustic == "0" &
+        dog_acoustic == "0" & noise_acoustic == "0" ~ "dog_visual1",
+      blinddog_visual == "1" & dog_visual == "0" & human_acoustic == "0" &
+        dog_acoustic == "0" & noise_acoustic == "0" ~ "blinddog_visual1",
+      human_acoustic == "1" & dog_visual == "0" & blinddog_visual == "0" &
+        dog_acoustic == "0" & noise_acoustic == "0" ~ "human_acoustic1",
+      dog_acoustic == "1" & dog_visual == "0" & blinddog_visual == "0" &
+        human_acoustic == "0" & noise_acoustic == "0" ~ "dog_acoustic1",
+      noise_acoustic == "1" & dog_visual == "0" & blinddog_visual == "0" &
+        human_acoustic == "0" & dog_acoustic == "0" ~ "noise_acoustic1",
+      dog_visual == "1" & human_acoustic == "1" &
+        blinddog_visual == "0" & dog_acoustic == "0" & noise_acoustic == "0" ~
+        "dog_visual1:human_acoustic1",
+      dog_visual == "1" & dog_acoustic == "1" &
+        blinddog_visual == "0" & human_acoustic == "0" & noise_acoustic == "0" ~
+        "dog_visual1:dog_acoustic1"
+    ),
+    scenario = factor(
+      scenario,
+      levels = c("Intercept",
+                 "dog_visual1",
+                 "blinddog_visual1",
+                 "human_acoustic1",
+                 "dog_acoustic1",
+                 "noise_acoustic1",
+                 "dog_visual1:human_acoustic1",
+                 "dog_visual1:dog_acoustic1")
+    )
+  )
+
+print(sub_8)
+
+library(ggplot2)
+
+ggplot(sub_8, aes(x = scenario, y = emmean)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.1) +
+  xlab(NULL) +
+  ylab("Predicted FID") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 
 
