@@ -67,7 +67,7 @@ write.csv(merged_data, "Hirobeetal2026.csv", row.names = FALSE)
 # Loaing the data ####
 merged_data <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_al_2026/refs/heads/main/Hirobeetal2026.csv")
 # ローカルから読み込む用
-merged_data <- read.csv("Hirobeetal2026.csv")
+merged_data <- read.csv("Hirobeetal2026.csv", colClasses = c(actime = "character"))
 
 # NAを消す
 merged_data <- na.omit(merged_data)
@@ -205,6 +205,7 @@ cor_vars <- Deer %>%
 cor_matrix <- cor(cor_vars, use = "complete.obs", method = "pearson")
 print(cor_matrix)
 
+
 # LMM ####
 library(lme4)
 library(Matrix)
@@ -212,10 +213,63 @@ library(Matrix)
 Deer <- subset(merged_data, FID <= 150)
 Deer$log_light <- log((Deer$light)+1)
 
+# cuesを分解して個別の変数に
+Deer <- Deer %>%
+  mutate(
+    human_visual = factor(ifelse(cues %in% c(
+      "human_vi", "human_vi_ac", "human_vi_dog_ac", "human_vi_no",
+      "human_vi_dog_vi", "human_vi_ac_dog_vi", "human_vi_dog_vi_ac",
+      "human_vi_no_dog_vi", "human_vi_dog_vi_cover", "human_vi_dog_vi_ac_cover"
+    ), 1, 0)),
+    
+    dog_visual = factor(ifelse(cues %in% c(
+      "human_vi_dog_vi", "human_vi_ac_dog_vi",
+      "human_vi_dog_vi_ac", "human_vi_no_dog_vi"
+    ), 1, 0)),
+    
+    blinddog_visual = factor(ifelse(cues %in% c(
+      "human_vi_dog_vi_cover", "human_vi_dog_vi_ac_cover"
+    ), 1, 0)),
+    
+    human_acoustic = factor(ifelse(cues %in% c(
+      "human_vi_ac", "human_vi_ac_dog_vi"
+    ), 1, 0)),
+    
+    dog_acoustic = factor(ifelse(cues %in% c(
+      "human_vi_dog_vi_ac", "human_vi_dog_ac", "human_vi_dog_vi_ac_cover"
+    ), 1, 0)),
+    
+    noise_acoustic = factor(ifelse(cues %in% c(
+      "human_vi_no", "human_vi_no_dog_vi"
+    ), 1, 0)),
+    
+    no_acoustic = factor(ifelse(cues %in% c(
+      "human_vi", "human_vi_dog_vi", "human_vi_dog_vi_cover"
+    ), 1, 0))
+  )
+
+# 予備解析：プレイバックの有音時間の違いによるFIDの変化がないか検証
+deer_prep <- Deer[Deer$human_acoustic == 1,]
+deer_prep$actime <- as.numeric(deer_prep$actime)
+
+prep_deer_model <- lm(
+  FID ~ log_light + SD + flock + AvgWind + season + actime,
+  data = deer_prep
+)
+# 結果の確認
+summary(prep_deer_model)
+
+prep_AD <- lm(
+  AD ~ log_light + SD + flock + AvgWind + season + actime,
+  data = deer_prep
+)
+# 結果の確認
+summary(prep_AD)
+
 
 # lmer()でLMMを構築
 Deer_model <- lmer(
-  FID ~ cues + log_light + noise + SD  + flock + AvgWind + season +
+  FID ~ dog_visual + blinddog_visual + human_acoustic + dog_acoustic + dog_visual:human_acoustic + dog_visual:dog_acoustic + noise_acoustic + log_light + SD + flock + AvgWind + season + 
     (1 | site_number_home),
   data = Deer
 )
@@ -228,96 +282,12 @@ library(performance)
 model_r2 <- r2_nakagawa(Deer_model)
 print(model_r2)
 
+# 相関も確認する
 library(car)
-vif(lm(FID ~ cues + log(light + 1) + flock + noise + SD + AvgWind + season, data = Deer))
-vif(lm(FID ~ cues + weather + cloud + flock + AvgWind + MaxWind + noise + log(light + 1) + moon + season + day_or_night, data = Deer))
+vif(lm(FID ~ day_or_night + dog_visual + blinddog_visual + dog_visual*human_acoustic + dog_visual*dog_acoustic + noise_acoustic + log_light + noise + SD  + flock + AvgWind + season, data = Deer))
 
 
-library(emmeans)
-# 多重比較 ####
-emmeans_FID <- emmeans(Deer_model, pairwise ~ cues)
-summary(emmeans_FID)
-plot(emmeans_FID)
-pwpp(emmeans_FID, sort = FALSE)
-
-library(multcompView)
-library(multcomp)
-cld_result_FID <- cld(emmeans_FID)
-print(cld_result_FID)
-
-library(dplyr)
-# グループ名を数字からアルファベットに置き換え
-cld_result_FID <- cld_result_FID %>%
-  mutate(.group = case_when(
-    .group == " 1  " ~ "a",      
-    .group == " 12 " ~ "ab",       
-    .group == " 123" ~ "abc",
-    .group == "  23" ~ "bc",
-    .group == "   3" ~ "c"
-  ))
-print(cld_result_FID)
-
-#cld_result_FID <- cld_result_FID %>%
-# mutate(color = ifelse(.group == "b", "orange", "black"))
-
-cld_result_FID <-  cld_result_FID %>%
-  mutate(cues = factor(cues, levels = c(
-    "human_vi",
-    "human_vi_ac",
-    "human_vi_dog_ac",
-    "human_vi_no",
-    "human_vi_dog_vi",
-    "human_vi_ac_dog_vi",
-    "human_vi_dog_vi_ac",
-    "human_vi_no_dog_vi",
-    "human_vi_dog_vi_cover",
-    "human_vi_dog_vi_ac_cover"
-  )))
-
-cld_result_FID <- cld_result_FID %>%
-  mutate(auditory = case_when(
-    grepl("no", cues) ~ "White noise",
-    grepl("human_vi_ac", cues) ~ "Human",
-    grepl("dog_ac", cues) ~ "Dog",
-    grepl("dog_vi_ac", cues) ~ "Dog",
-    TRUE ~ "None"
-  ))
-
-shape_values <- c(
-  "White noise" = 17,
-  "Human" = 15,
-  "Dog" = 18,
-  "None" = 16
-)
-
-color_values <- c(
-  "White noise" = "#E69F00",
-  "Human" = "#56B4E9",
-  "Dog" = "#009E73",
-  "None" = "#999999"
-)
-
-library(ggplot2)
-# プロット作成
-# 1600*900で出力
-ggplot(cld_result_FID, aes(x = cues, y = emmean, shape = auditory, color = auditory)) +
-  geom_point(size = 6) +                                
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, linewidth = 2) + 
-  geom_text(aes(label = .group), hjust = -0.7, size = 7, show.legend = FALSE) +  
-  labs(
-    x = NULL, 
-    y = "Estimated mean value (m)", 
-    shape = "acoustic cues",
-    color = "acoustic cues"
-  ) +
-  theme_classic(base_size = 22) +
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) +
-  scale_color_manual(values = color_values) +
-  scale_shape_manual(values = shape_values)
-
-
-# 信頼区間を計算 ####
+# 信頼区間を計算
 conf_intervals_Deer <- confint(Deer_model)
 conf_intervals_Deer <- conf_intervals_Deer[!rownames(conf_intervals_Deer) %in% c(".sig01", ".sig02",  ".sigma"), ]
 estimates <- summary(Deer_model)$coefficients
@@ -332,13 +302,28 @@ results <- data.frame(
 # NAの行を削除
 results <- na.omit(results)
 
-# cuesに関する行を除外
-results_f <- results %>%
-  filter(!grepl("cues", term), term != "(Intercept)")
-
+results_f <- results
 
 results_f <- results_f %>%
   mutate(color = ifelse(lwr > 0, "#D55E00", "black"))
+
+results_f <- results_f %>%
+  mutate(term = factor(term, levels = c(
+    "seasonNonMating",
+    "AvgWind",
+    "flock",
+    "SD",
+    "noise",
+    "log_light",
+    "dog_visual1:human_acoustic1",
+    "dog_visual1:dog_acoustic1",
+    "noise_acoustic1",
+    "dog_acoustic1",
+    "human_acoustic1",
+    "blinddog_visual1",
+    "dog_visual1",
+    "(Intercept)"
+  )))
 
 # 800*500で作成
 ggplot(results_f, aes(x = estimate, y = term, color = color)) +
@@ -348,167 +333,52 @@ ggplot(results_f, aes(x = estimate, y = term, color = color)) +
        y = "Explanatory variables",
        x = "Estimated coefficients") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-7, 17)) +
-  theme_classic(base_size = 22) +
+  coord_cartesian(xlim = c(-40, 40)) +
+  theme_classic(base_size = 32) +
   scale_y_discrete(
-    labels = c("log_light" = "Light",
-               "seasonNonBreeding" = "Postmating season",
+    labels = c("noise_acoustic1" = "White noise",
+               "dog_visual1" = "Dog visual cue",
+               "blinddog_visual1" = "Covered dog visual cue",
+               "human_acoustic1" = "Human acoustic cue",
+               "dog_acoustic1" = "Dog acoustic cue",
+               "dog_visual1:dog_acoustic1" = "Interaction between dog visual and dog acoustic cue",
+               "dog_visual1:human_acoustic1" = "Interaction between dog visual and human acoustic cue",
+               "log_light" = "Ambient light level",
+               "seasonNonMating" = "Postmating season",
                "SD" = "Start distance",
-               "noise" = "Equivalent noise",
+               "noise" = "Environmental noise",
                "flock" = "Flock size",
                "AvgWind" = "Average wind speed")
   ) +
   scale_color_identity()
 
-# 切片との比較にして、カテゴリの効果量は推定値から解釈
-results_cues <- results %>%
-  filter(grepl("cues", term))
-
-results_cues <-  results_cues %>%
-  mutate(
-    term = gsub("^cues", "", term))
-    
-results_cues <- results_cues %>%
-  mutate(term = factor(term, levels = c(
-    "human_vi_ac",
-    "human_vi_dog_ac",
-    "human_vi_no",
-    "human_vi_dog_vi",
-    "human_vi_ac_dog_vi",
-    "human_vi_dog_vi_ac",
-    "human_vi_no_dog_vi",
-    "human_vi_dog_vi_cover",
-    "human_vi_dog_vi_ac_cover"
-  )))
-print(results_cues)
-
-results_cues <- results_cues %>%
-  mutate(auditory = case_when(
-    grepl("no", term) ~ "White noise",
-    grepl("human_vi_ac", term) ~ "Human",
-    grepl("dog_ac", term) ~ "Dog",
-    grepl("dog_vi_ac", term) ~ "Dog",
-    TRUE ~ "None"
-  ))
-
-shape_values <- c(
-  "White noise" = 17,
-  "Human" = 15,
-  "Dog" = 18,
-  "None" = 16
-)
-
-color_values <- c(
-  "White noise" = "#E69F00",
-  "Human" = "#56B4E9",
-  "Dog" = "#009E73",
-  "None" = "#999999"
-)
-
-
-ggplot(results_cues, aes(x = term, y = estimate, shape = auditory, color = auditory)) +
-  geom_point(size = 5) +  
-  geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.3, linewidth = 2) +  
-  labs(
-    x = NULL,
-    y = "Estimated coefficients") +
-  geom_hline(yintercept = 0, linetype = "dotted") +
-  theme_classic(base_size = 22)+
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) +
-  scale_color_manual(values = color_values) +
-  scale_shape_manual(values = shape_values)
-
-
-
 
 
 # AD ####
 Deer_model_AD <- lmer(
-  AD ~ cues + log_light + noise + flock + SD + AvgWind + season +
+  AD ~ dog_visual + blinddog_visual + human_acoustic + dog_acoustic + dog_visual:human_acoustic + dog_visual:dog_acoustic + noise_acoustic + log_light + SD + flock + AvgWind + season + 
     (1 | site_number_home),
   data = Deer
 )
-
 # 結果の確認
 summary(Deer_model_AD)
 
+# 相互作用項の確認
+X <- model.matrix(Deer_model_AD)
+X_interaction <- X[, "dog_visual1:human_acoustic1"]
+print(X_interaction)
+
+Deer_with_interaction <- cbind(Deer, interaction_value = X_interaction)
+View(Deer_with_interaction)
+
+library(performance)
 # 決定係数の確認
-model_AD_r2 <- r2_nakagawa(Deer_model_AD)
-print(model_AD_r2)
+model_r2_AD <- r2_nakagawa(Deer_model_AD)
+print(model_r2_AD)
 
-
-# emmeans ####
-library(emmeans)
-
-# 多重比較
-emmeans_AD <- emmeans(Deer_model_AD, pairwise ~ cues)
-summary(emmeans_AD)
-plot(emmeans_AD)
-pwpp(emmeans_AD, sort = FALSE)
-
-library(multcompView)
-library(multcomp)
-cld_result_AD <- cld(emmeans_AD)
-print(cld_result_AD)
-
-# グループ名を数字からアルファベットに置き換え
-cld_result_AD <- cld_result_AD %>%
-  mutate(.group = case_when(
-    .group == " 1" ~ "a"
-  ))
-print(cld_result_AD)
-
-cld_result_AD <-  cld_result_AD %>%
-  mutate(cues = factor(cues, levels = c(
-    "human_vi",
-    "human_vi_ac",
-    "human_vi_dog_ac",
-    "human_vi_no",
-    "human_vi_dog_vi",
-    "human_vi_ac_dog_vi",
-    "human_vi_dog_vi_ac",
-    "human_vi_no_dog_vi",
-    "human_vi_dog_vi_cover",
-    "human_vi_dog_vi_ac_cover"
-  )))
-
-cld_result_AD <- cld_result_AD %>%
-  mutate(auditory = case_when(
-    grepl("no", cues) ~ "White noise",
-    grepl("human_vi_ac", cues) ~ "Human",
-    grepl("dog_ac", cues) ~ "Dog",
-    grepl("dog_vi_ac", cues) ~ "Dog",
-    TRUE ~ "None"
-  ))
-
-
-library(ggplot2)
-# プロット作成
-# 1600*900で出力
-ggplot(cld_result_AD, aes(x = cues, y = emmean, shape = auditory, color = auditory)) +
-  geom_point(size = 6) +                                
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, linewidth = 2) + 
-  geom_text(aes(label = .group), hjust = -0.7, size = 7, show.legend = FALSE) +  
-  labs(
-    x = NULL, 
-    y = "Estimated mean value (m)", 
-    shape = "acoustic cues",
-    color = "acoustic cues"
-  ) +
-  theme_classic(base_size = 22) +
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) +
-  scale_color_manual(values = color_values) +
-  scale_shape_manual(values = shape_values)
-
-
-# 推定値の信頼区間を計算 ####
+# 信頼区間を計算 
 conf_intervals_Deer_AD <- confint(Deer_model_AD)
-# 不必要な行を除外
 conf_intervals_Deer_AD <- conf_intervals_Deer_AD[!rownames(conf_intervals_Deer_AD) %in% c(".sig01", ".sig02",  ".sigma"), ]
-
-# 推定値を取得
 estimates_AD <- summary(Deer_model_AD)$coefficients
 
 # データフレームに変換
@@ -518,98 +388,58 @@ results_AD <- data.frame(
   lwr = conf_intervals_Deer_AD[, 1],
   upr = conf_intervals_Deer_AD[, 2]
 )
-
-
 # NAの行を削除
 results_AD <- na.omit(results_AD)
 
-# cuesに関する行を除外
-results_AD_f <- results_AD %>%
-  filter(!grepl("cues", term), term != "(Intercept)")
+results_AD_f <- results_AD
 
 results_AD_f <- results_AD_f %>%
   mutate(color = ifelse(lwr > 0, "#D55E00", "black"))
 
-# 800*500
+results_AD_f <- results_AD_f %>%
+  mutate(term = factor(term, levels = c(
+    "seasonNonMating",
+    "AvgWind",
+    "flock",
+    "SD",
+    "noise",
+    "log_light",
+    "dog_visual1:human_acoustic1",
+    "dog_visual1:dog_acoustic1",
+    "noise_acoustic1",
+    "dog_acoustic1",
+    "human_acoustic1",
+    "blinddog_visual1",
+    "dog_visual1",
+    "(Intercept)"
+  )))
+
+# 800*500で作成
 ggplot(results_AD_f, aes(x = estimate, y = term, color = color)) +
   geom_point(size = 5) +  
-  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  # 信頼区間
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  
   labs(
-       y = "Explanatory variables",
-       x = "Estimated coefficients") +
+    y = "Explanatory variables",
+    x = "Estimated coefficients") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-8, 18)) +
-  theme_classic(base_size = 22) +
+  coord_cartesian(xlim = c(-40, 40)) +
+  theme_classic(base_size = 32) +
   scale_y_discrete(
-    labels = c("log_light" = "Light",
-               "seasonNonBreeding" = "Postmating season",
+    labels = c("noise_acoustic1" = "White noise",
+               "dog_visual1" = "Dog visual cue",
+               "blinddog_visual1" = "Covered dog visual cue",
+               "human_acoustic1" = "Human acoustic cue",
+               "dog_acoustic1" = "Dog acoustic cue",
+               "dog_visual1:dog_acoustic1" = "Interaction between dog visual and dog acoustic cue",
+               "dog_visual1:human_acoustic1" = "Interaction between dog visual and human acoustic cue",
+               "log_light" = "Ambient light level",
+               "seasonNonMating" = "Postmating season",
                "SD" = "Start distance",
-               "noise" = "Equivalent noise",
+               "noise" = "Environmental noise",
                "flock" = "Flock size",
                "AvgWind" = "Average wind speed")
   ) +
   scale_color_identity()
-
-
-# 切片との比較にして、カテゴリの効果量は推定値から解釈
-results_AD_cues <- results_AD %>%
-  filter(grepl("cues", term))
-
-results_AD_cues <-  results_AD_cues %>%
-  mutate(
-    term = gsub("^cues", "", term))
-
-results_AD_cues <- results_AD_cues %>%
-  mutate(term = factor(term, levels = c(
-    "human_vi_ac",
-    "human_vi_dog_ac",
-    "human_vi_no",
-    "human_vi_dog_vi",
-    "human_vi_ac_dog_vi",
-    "human_vi_dog_vi_ac",
-    "human_vi_no_dog_vi",
-    "human_vi_dog_vi_cover",
-    "human_vi_dog_vi_ac_cover"
-  )))
-print(results_AD_cues)
-
-results_AD_cues <- results_AD_cues %>%
-  mutate(auditory = case_when(
-    grepl("no", term) ~ "White noise",
-    grepl("human_vi_ac", term) ~ "Human",
-    grepl("dog_ac", term) ~ "Dog",
-    grepl("dog_vi_ac", term) ~ "Dog",
-    TRUE ~ "None"
-  ))
-
-shape_values <- c(
-  "White noise" = 17,
-  "Human" = 15,
-  "Dog" = 18,
-  "None" = 16
-)
-
-color_values <- c(
-  "White noise" = "#E69F00",
-  "Human" = "#56B4E9",
-  "Dog" = "#009E73",
-  "None" = "#999999"
-)
-
-
-ggplot(results_AD_cues, aes(x = term, y = estimate, shape = auditory, color = auditory)) +
-  geom_point(size = 5) +  
-  geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.3, linewidth = 2) +  
-  labs(
-    x = NULL,
-    y = "Estimated coefficients") +
-  geom_hline(yintercept = 0, linetype = "dotted") +
-  theme_classic(base_size = 22)+
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) +
-  scale_color_manual(values = color_values) +
-  scale_shape_manual(values = shape_values)
-
 
 
 #####
@@ -831,4 +661,14 @@ ggplot(data, aes(y = Estimate, x = Pattern, ymin = LowerCI, ymax = UpperCI)) +
   ) +
   theme(
     legend.position = "none" 
+  )
+
+# 平均と標準偏差の描画
+library(dplyr)
+
+Deer %>%
+  summarise(
+    across(c(flock, AvgWind, MaxWind, noise, light),
+           list(mean = mean, sd = sd), 
+           na.rm = TRUE)
   )
