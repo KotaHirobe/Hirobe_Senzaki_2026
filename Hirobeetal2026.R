@@ -317,6 +317,9 @@ results <- na.omit(results)
 
 results_f <- results
 
+#results_f <- results_f %>%
+#  mutate(color = ifelse(lwr > 0, "#D55E00", "black"))
+
 library(dplyr)
 library(tibble)
 
@@ -398,22 +401,22 @@ print(plot_dat)
 
 # 800*500で作成
 ggplot(plot_dat, aes(x = estimate, y = term, color = group)) +
-  geom_point(size = 5) +  
-  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  
+  geom_point(size = 4) +  
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 1) +  
   labs(
-       y = "Explanatory variables",
-       x = "Estimated coefficients") +
+       y = NULL,
+       x = "Effect size") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-20, 40)) +
-  theme_classic(base_size = 32) +
+  coord_cartesian(xlim = c(-20, 20)) +
+  theme_classic(base_size = 20) +
   scale_y_discrete(
     labels = c("noise_acoustic1" = "White noise",
                "dog_visual1" = "Dog visual",
                "blinddog_visual1" = "Covered-dog visual",
                "human_acoustic1" = "Human voice",
                "dog_acoustic1" = "Dog bark",
-               "dog_visual1:dog_acoustic1" = "Dog visual + dog bark",
-               "dog_visual1:human_acoustic1" = "Dog visual + human voice",
+               "dog_visual1:dog_acoustic1" = "Dog visual + Dog bark",
+               "dog_visual1:human_acoustic1" = "Dog visual + Human voice",
                "gap_white_ambient"         = "",
                "gap_blinddog_inter"        = "",
                "gap_bark_inter"            = "",
@@ -423,50 +426,50 @@ ggplot(plot_dat, aes(x = estimate, y = term, color = group)) +
     name   = "Group",
     values = c(
       "Control"     = "grey40",
-      "Human"       = "steelblue4",
-      "Dog"         = "orange3",
-      "Interaction" = "purple3"
+      "Human"       = "#FF4B00",
+      "Dog"         = "#005AFF",
+      "Interaction" = "#03AF7A"
     ),
     na.translate = FALSE   
   )
 
 
+# ほかの変数
+terms_keep_2 <- c(
+  "log_light",
+  "seasonNonMating",
+  "SD",
+  "noise",
+  "flock",
+  "AvgWind"
+)
 
-
+plot_dat_2 <- results_f2 %>%
+  filter(
+    term %in% terms_keep_2
+    )
 
 
 
 # 800*500で作成# 800*500で作成# 800*500で作成
-ggplot(plot_dat, aes(x = estimate, y = term, color = color)) +
-  geom_point(aes(shape = group),
-             size = 5) +  
-  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  
+ggplot(plot_dat_2, aes(x = estimate, y = term)) +
+  geom_point(size = 4) +  
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2, linewidth = 1) +  
   labs(
-    y = "Explanatory variables",
-    x = "Estimated coefficients") +
+    y = NULL,
+    x = "Effect size") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-20, 40)) +
-  theme_classic(base_size = 32) +
+  coord_cartesian(xlim = c(-7, 13)) +
+  theme_classic(base_size = 20) +
   scale_y_discrete(
-    labels = c("noise_acoustic1" = "White noise",
-               "dog_visual1" = "Dog visual",
-               "blinddog_visual1" = "Covered-dog visual",
-               "human_acoustic1" = "Human voice",
-               "dog_acoustic1" = "Dog bark",
-               "dog_visual1:dog_acoustic1" = "Dog visual + dog bark",
-               "dog_visual1:human_acoustic1" = "Dog visual + human voice",
+    labels = c(
                "log_light" = "Ambient light level",
                "seasonNonMating" = "Postmating season",
                "SD" = "Start distance",
                "noise" = "Environmental noise",
                "flock" = "Flock size",
-               "AvgWind" = "Average wind speed",
-               "gap_white_ambient"         = "",
-               "gap_blinddog_inter"        = "",
-               "gap_bark_inter"            = "",
-               "gap" = "")
-  ) +
-  scale_color_identity()
+               "AvgWind" = "Average wind speed")
+  ) 
 
 
 # FIDの推定値出す
@@ -547,15 +550,66 @@ sub_8 <- sub_8 %>%
 
 print(sub_8)
 
+sub_8 <- sub_8 %>%
+  mutate(
+    group = case_when(
+      scenario %in% c("blinddog_visual1", "noise_acoustic1") ~ "Control",
+      scenario == "human_acoustic1"                   ~ "Human",
+      scenario %in% c("dog_visual1",
+                      "dog_acoustic1")                ~ "Dog",
+      scenario %in% c("dog_visual1:human_acoustic1",
+                      "dog_visual1:dog_acoustic1")    ~ "Interaction",
+      scenario == "Intercept" ~ "Baseline" 
+    ),
+    group = factor(group, levels = c("Baseline", "Human", "Dog", "Interaction", "Control")),
+    
+    # x軸ラベル用
+    scenario_lab = case_when(
+      scenario == "Intercept"                    ~ "Baseline",
+      scenario == "dog_visual1"                  ~ "Dog visual",
+      scenario == "blinddog_visual1"             ~ "Covered-dog visual",
+      scenario == "human_acoustic1"              ~ "Human voice",
+      scenario == "dog_acoustic1"                ~ "Dog bark",
+      scenario == "noise_acoustic1"              ~ "White noise",
+      scenario == "dog_visual1:human_acoustic1"  ~ "Dog visual + Human voice",
+      scenario == "dog_visual1:dog_acoustic1"    ~ "Dog visual + Dog bark"
+    ),
+    scenario_lab = factor(
+      scenario_lab,
+      levels = c(
+        "Baseline",
+        "Human voice",
+        "Dog visual",
+        "Dog bark",
+        "Dog visual + Dog bark",
+        "Dog visual + Human voice",
+        "Covered-dog visual",
+        "White noise"
+      )
+    )
+  )
+
+
 library(ggplot2)
 
-ggplot(sub_8, aes(x = scenario, y = emmean)) +
-  geom_point(size = 3) +
-  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.1) +
+ggplot(sub_8, aes(x = scenario_lab, y = emmean, color = group)) +
+  geom_point(size = 4) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2, linewidth = 1) +
   xlab(NULL) +
-  ylab("Predicted FID") +
+  ylab("Predicted FID (m)") +
   theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_color_manual(
+    name   = "Group",
+    values = c(
+      "Control"     = "grey40",
+      "Human"       = "#FF4B00",
+      "Dog"         = "#005AFF",
+      "Interaction" = "#03AF7A",
+      "Baseline" = "black"
+    ),
+    na.translate = FALSE
+  )
 
 
 
