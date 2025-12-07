@@ -317,51 +317,154 @@ results <- na.omit(results)
 
 results_f <- results
 
-results_f <- results_f %>%
-  mutate(color = ifelse(lwr > 0, "#D55E00", "black"))
+library(dplyr)
+library(tibble)
+
+levels_with_gaps <- c(
+  "seasonNonMating",
+  "AvgWind",
+  "flock",
+  "SD",
+  "noise",
+  "log_light",
+  "gap_white_ambient",       
+  "noise_acoustic1",           
+  "blinddog_visual1",          
+  "gap_blinddog_inter",         
+  "dog_visual1:human_acoustic1",
+  "dog_visual1:dog_acoustic1",  
+  "gap_bark_inter",            
+  "dog_acoustic1",              
+  "dog_visual1",
+  "gap",
+  "human_acoustic1",
+  "(Intercept)"
+)
 
 results_f <- results_f %>%
-  mutate(term = factor(term, levels = c(
-    "seasonNonMating",
-    "AvgWind",
-    "flock",
-    "SD",
-    "noise",
-    "log_light",
-    "dog_visual1:human_acoustic1",
-    "dog_visual1:dog_acoustic1",
-    "noise_acoustic1",
-    "dog_acoustic1",
-    "human_acoustic1",
-    "blinddog_visual1",
-    "dog_visual1",
-    "(Intercept)"
-  )))
+  mutate(term = factor(term, levels = levels_with_gaps))
+
+gap_df <- tibble(
+  term     = factor(
+    c("gap", "gap_white_ambient", "gap_blinddog_inter", "gap_bark_inter"),
+    levels = levels_with_gaps
+  ),
+  estimate = NA_real_,
+  lwr      = NA_real_,
+  upr      = NA_real_,
+  color    = NA_character_
+)
+
+results_f2 <- bind_rows(results_f, gap_df)
+
+results_f2 <- results_f2 %>%
+  mutate(
+    group = case_when(
+      term %in% c("blinddog_visual1", "noise_acoustic1") ~ "Control",
+      term == "human_acoustic1" ~ "Human",
+      term %in% c("dog_visual1", "dog_acoustic1") ~ "Dog",
+      term %in% c("dog_visual1:human_acoustic1", "dog_visual1:dog_acoustic1") ~ "Interaction"
+    ),
+    group = factor(group, levels = c("Control", "Human", "Dog", "Interaction"))
+  )
+
+library(dplyr)
+
+terms_keep <- c(
+  "dog_visual1",
+  "blinddog_visual1",
+  "human_acoustic1",
+  "dog_acoustic1",
+  "noise_acoustic1",
+  "dog_visual1:human_acoustic1",
+  "dog_visual1:dog_acoustic1"
+)
+
+plot_dat <- results_f2 %>%
+  filter(
+    term %in% terms_keep |
+      term %in% c("gap_white_ambient", "gap_blinddog_inter", "gap_bark_inter", "gap")
+  )
+
+plot_dat <- plot_dat %>%
+  mutate(
+    group = factor(group,
+                   levels = c("Human", "Dog", "Interaction", "Control"))
+  )
+
+print(plot_dat)
+
+
 
 # 800*500で作成
-ggplot(results_f, aes(x = estimate, y = term, color = color)) +
+ggplot(plot_dat, aes(x = estimate, y = term, color = group)) +
   geom_point(size = 5) +  
   geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  
   labs(
        y = "Explanatory variables",
        x = "Estimated coefficients") +
   geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-40, 40)) +
+  coord_cartesian(xlim = c(-20, 40)) +
   theme_classic(base_size = 32) +
   scale_y_discrete(
     labels = c("noise_acoustic1" = "White noise",
-               "dog_visual1" = "Dog visual cue",
-               "blinddog_visual1" = "Covered dog visual cue",
-               "human_acoustic1" = "Human acoustic cue",
-               "dog_acoustic1" = "Dog acoustic cue",
-               "dog_visual1:dog_acoustic1" = "Interaction between dog visual and dog acoustic cue",
-               "dog_visual1:human_acoustic1" = "Interaction between dog visual and human acoustic cue",
+               "dog_visual1" = "Dog visual",
+               "blinddog_visual1" = "Covered-dog visual",
+               "human_acoustic1" = "Human voice",
+               "dog_acoustic1" = "Dog bark",
+               "dog_visual1:dog_acoustic1" = "Dog visual + dog bark",
+               "dog_visual1:human_acoustic1" = "Dog visual + human voice",
+               "gap_white_ambient"         = "",
+               "gap_blinddog_inter"        = "",
+               "gap_bark_inter"            = "",
+               "gap" = "")
+  ) +
+  scale_color_manual(
+    name   = "Group",
+    values = c(
+      "Control"     = "grey40",
+      "Human"       = "steelblue4",
+      "Dog"         = "orange3",
+      "Interaction" = "purple3"
+    ),
+    na.translate = FALSE   
+  )
+
+
+
+
+
+
+
+# 800*500で作成# 800*500で作成# 800*500で作成
+ggplot(plot_dat, aes(x = estimate, y = term, color = color)) +
+  geom_point(aes(shape = group),
+             size = 5) +  
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  
+  labs(
+    y = "Explanatory variables",
+    x = "Estimated coefficients") +
+  geom_vline(xintercept = 0, linetype = "dotted") +
+  coord_cartesian(xlim = c(-20, 40)) +
+  theme_classic(base_size = 32) +
+  scale_y_discrete(
+    labels = c("noise_acoustic1" = "White noise",
+               "dog_visual1" = "Dog visual",
+               "blinddog_visual1" = "Covered-dog visual",
+               "human_acoustic1" = "Human voice",
+               "dog_acoustic1" = "Dog bark",
+               "dog_visual1:dog_acoustic1" = "Dog visual + dog bark",
+               "dog_visual1:human_acoustic1" = "Dog visual + human voice",
                "log_light" = "Ambient light level",
                "seasonNonMating" = "Postmating season",
                "SD" = "Start distance",
                "noise" = "Environmental noise",
                "flock" = "Flock size",
-               "AvgWind" = "Average wind speed")
+               "AvgWind" = "Average wind speed",
+               "gap_white_ambient"         = "",
+               "gap_blinddog_inter"        = "",
+               "gap_bark_inter"            = "",
+               "gap" = "")
   ) +
   scale_color_identity()
 
