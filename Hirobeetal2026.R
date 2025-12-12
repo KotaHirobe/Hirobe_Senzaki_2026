@@ -248,6 +248,7 @@ Deer <- Deer %>%
     ), 1, 0))
   )
 
+
 # 予備解析：プレイバックの有音時間の違いによるFIDの変化がないか検証
 deer_prep <- Deer[Deer$human_acoustic == 1,]
 deer_prep$actime <- as.numeric(deer_prep$actime)
@@ -289,8 +290,6 @@ Deer_model <- lmer(
     dog_acoustic + 
     dog_visual:human_acoustic + 
     dog_visual:dog_acoustic +
-    dog_visual:noise_acoustic +
-    dog_acoustic:blinddog_visual +
     noise_acoustic + 
     log_light +
     SD + 
@@ -300,6 +299,7 @@ Deer_model <- lmer(
     (1 | site_number_home),
   data = Deer
 )
+
 # 結果の確認
 summary(Deer_model)
 
@@ -318,8 +318,6 @@ vif(lm(FID ~
          dog_acoustic + 
          dog_visual:human_acoustic + 
          dog_visual:dog_acoustic +
-         dog_visual:noise_acoustic +
-         dog_acoustic:blinddog_visual +
          noise_acoustic + 
          log_light +
          SD + 
@@ -536,12 +534,7 @@ sub_8 <- subset(
        dog_acoustic == "0" & noise_acoustic == "0") |
     # 8) dog_visual1:dog_acoustic1
     (dog_visual == "1" & blinddog_visual == "0" & human_acoustic == "0" &
-       dog_acoustic == "1" & noise_acoustic == "0") |
-    (dog_visual == "1" & blinddog_visual == "0" & human_acoustic == "0" &
-       dog_acoustic == "0" & noise_acoustic == "1") |
-    (dog_visual == "0" & blinddog_visual == "1" & human_acoustic == "0" &
-       dog_acoustic == "1" & noise_acoustic == "0")
-)
+       dog_acoustic == "1" & noise_acoustic == "0") )
 
 library(dplyr)
 
@@ -565,14 +558,7 @@ sub_8 <- sub_8 %>%
         "dog_visual1:human_acoustic1",
       dog_visual == "1" & dog_acoustic == "1" &
         blinddog_visual == "0" & human_acoustic == "0" & noise_acoustic == "0" ~
-        "dog_visual1:dog_acoustic1",
-      dog_visual == "1" & dog_acoustic == "0" &
-        blinddog_visual == "0" & human_acoustic == "0" & noise_acoustic == "1" ~
-        "dog_visual1:noise_acoustic1",
-      dog_visual == "0" & dog_acoustic == "1" &
-        blinddog_visual == "1" & human_acoustic == "0" & noise_acoustic == "0" ~
-        "blinddog_visual1:dog_acoustic1"
-    ),
+        "dog_visual1:dog_acoustic1"    ),
     scenario = factor(
       scenario,
       levels = c("Intercept",
@@ -582,9 +568,7 @@ sub_8 <- sub_8 %>%
                  "dog_acoustic1",
                  "noise_acoustic1",
                  "dog_visual1:human_acoustic1",
-                 "dog_visual1:dog_acoustic1",
-                 "dog_visual1:noise_acoustic1",
-                 "blinddog_visual1:dog_acoustic1")
+                 "dog_visual1:dog_acoustic1")
     )
   )
 
@@ -598,9 +582,8 @@ sub_8 <- sub_8 %>%
       scenario %in% c("dog_visual1",
                       "dog_acoustic1")                ~ "Dog",
       scenario %in% c("dog_visual1:human_acoustic1",
-                      "dog_visual1:dog_acoustic1",
-                      "dog_visual1:noise_acoustic1",
-                      "blinddog_visual1:dog_acoustic1")    ~ "Interaction",
+                      "dog_visual1:dog_acoustic1"
+                      )    ~ "Interaction",
       scenario == "Intercept" ~ "Baseline" 
     ),
     group = factor(group, levels = c("Baseline", "Human", "Dog", "Interaction", "Control")),
@@ -614,9 +597,7 @@ sub_8 <- sub_8 %>%
       scenario == "dog_acoustic1"                ~ "Dog bark",
       scenario == "noise_acoustic1"              ~ "White noise",
       scenario == "dog_visual1:human_acoustic1"  ~ "Dog visual + Human voice",
-      scenario == "dog_visual1:dog_acoustic1"    ~ "Dog visual + Dog bark",
-      scenario == "dog_visual1:noise_acoustic1"  ~ "Dog visual + White noise",
-      scenario == "blinddog_visual1:dog_acoustic1" ~ "Covered-dog visual + Dog bark"
+      scenario == "dog_visual1:dog_acoustic1"    ~ "Dog visual + Dog bark"
     ),
     scenario_lab = factor(
       scenario_lab,
@@ -627,8 +608,6 @@ sub_8 <- sub_8 %>%
         "Dog bark",
         "Dog visual + Dog bark",
         "Dog visual + Human voice",
-        "Dog visual + White noise",
-        "Covered-dog visual + Dog bark",
         "Covered-dog visual",
         "White noise"
       )
