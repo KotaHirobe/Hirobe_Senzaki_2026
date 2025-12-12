@@ -282,7 +282,21 @@ Deer$season <- factor(Deer$season)
 
 # lmer()でLMMを構築
 Deer_model <- lmer(
-  FID ~ dog_visual + blinddog_visual + human_acoustic + dog_acoustic + dog_visual:human_acoustic + dog_visual:dog_acoustic + noise_acoustic + log_light + SD + flock + AvgWind + season + 
+  FID ~ 
+    dog_visual + 
+    blinddog_visual + 
+    human_acoustic + 
+    dog_acoustic + 
+    dog_visual:human_acoustic + 
+    dog_visual:dog_acoustic +
+    dog_visual:noise_acoustic +
+    dog_acoustic:blinddog_visual +
+    noise_acoustic + 
+    log_light +
+    SD + 
+    flock +
+    AvgWind + 
+    season + 
     (1 | site_number_home),
   data = Deer
 )
@@ -297,7 +311,22 @@ print(model_r2)
 
 # 相関も確認する
 library(car)
-vif(lm(FID ~ day_or_night + dog_visual + blinddog_visual + dog_visual*human_acoustic + dog_visual*dog_acoustic + noise_acoustic + log_light + noise + SD  + flock + AvgWind + season, data = Deer))
+vif(lm(FID ~ 
+         dog_visual + 
+         blinddog_visual + 
+         human_acoustic + 
+         dog_acoustic + 
+         dog_visual:human_acoustic + 
+         dog_visual:dog_acoustic +
+         dog_visual:noise_acoustic +
+         dog_acoustic:blinddog_visual +
+         noise_acoustic + 
+         log_light +
+         SD + 
+         flock +
+         AvgWind + 
+         season,
+       data = Deer))
 
 
 # 信頼区間を計算
@@ -315,161 +344,161 @@ results <- data.frame(
 # NAの行を削除
 results <- na.omit(results)
 
-results_f <- results
+#results_f <- results
 
 #results_f <- results_f %>%
 #  mutate(color = ifelse(lwr > 0, "#D55E00", "black"))
 
-library(dplyr)
-library(tibble)
+#library(dplyr)
+#library(tibble)
 
-levels_with_gaps <- c(
-  "seasonNonMating",
-  "AvgWind",
-  "flock",
-  "SD",
-  "noise",
-  "log_light",
-  "gap_white_ambient",       
-  "noise_acoustic1",           
-  "blinddog_visual1",          
-  "gap_blinddog_inter",         
-  "dog_visual1:human_acoustic1",
-  "dog_visual1:dog_acoustic1",  
-  "gap_bark_inter",            
-  "dog_acoustic1",              
-  "dog_visual1",
-  "gap",
-  "human_acoustic1",
-  "(Intercept)"
-)
+#levels_with_gaps <- c(
+#  "seasonNonMating",
+#  "AvgWind",
+#  "flock",
+#  "SD",
+#  "noise",
+#  "log_light",
+#  "gap_white_ambient",       
+#  "noise_acoustic1",           
+#  "blinddog_visual1",          
+#  "gap_blinddog_inter",         
+#  "dog_visual1:human_acoustic1",
+#  "dog_visual1:dog_acoustic1",  
+#  "gap_bark_inter",            
+#  "dog_acoustic1",              
+#  "dog_visual1",
+#  "gap",
+#  "human_acoustic1",
+#  "(Intercept)"
+#)
 
-results_f <- results_f %>%
-  mutate(term = factor(term, levels = levels_with_gaps))
+#results_f <- results_f %>%
+#  mutate(term = factor(term, levels = levels_with_gaps))
 
-gap_df <- tibble(
-  term     = factor(
-    c("gap", "gap_white_ambient", "gap_blinddog_inter", "gap_bark_inter"),
-    levels = levels_with_gaps
-  ),
-  estimate = NA_real_,
-  lwr      = NA_real_,
-  upr      = NA_real_,
-  color    = NA_character_
-)
+#gap_df <- tibble(
+#  term     = factor(
+#    c("gap", "gap_white_ambient", "gap_blinddog_inter", "gap_bark_inter"),
+#    levels = levels_with_gaps
+#  ),
+#  estimate = NA_real_,
+#  lwr      = NA_real_,
+#  upr      = NA_real_,
+#  color    = NA_character_
+#)
 
-results_f2 <- bind_rows(results_f, gap_df)
+#results_f2 <- bind_rows(results_f, gap_df)
 
-results_f2 <- results_f2 %>%
-  mutate(
-    group = case_when(
-      term %in% c("blinddog_visual1", "noise_acoustic1") ~ "Control",
-      term == "human_acoustic1" ~ "Human",
-      term %in% c("dog_visual1", "dog_acoustic1") ~ "Dog",
-      term %in% c("dog_visual1:human_acoustic1", "dog_visual1:dog_acoustic1") ~ "Interaction"
-    ),
-    group = factor(group, levels = c("Control", "Human", "Dog", "Interaction"))
-  )
+#results_f2 <- results_f2 %>%
+#  mutate(
+#    group = case_when(
+#      term %in% c("blinddog_visual1", "noise_acoustic1") ~ "Control",
+#      term == "human_acoustic1" ~ "Human",
+#      term %in% c("dog_visual1", "dog_acoustic1") ~ "Dog",
+#      term %in% c("dog_visual1:human_acoustic1", "dog_visual1:dog_acoustic1") ~ "Interaction"
+#    ),
+#    group = factor(group, levels = c("Control", "Human", "Dog", "Interaction"))
+#  )
 
-library(dplyr)
+#library(dplyr)
 
-terms_keep <- c(
-  "dog_visual1",
-  "blinddog_visual1",
-  "human_acoustic1",
-  "dog_acoustic1",
-  "noise_acoustic1",
-  "dog_visual1:human_acoustic1",
-  "dog_visual1:dog_acoustic1"
-)
+#terms_keep <- c(
+#  "dog_visual1",
+#  "blinddog_visual1",
+#  "human_acoustic1",
+#  "dog_acoustic1",
+#  "noise_acoustic1",
+#  "dog_visual1:human_acoustic1",
+#  "dog_visual1:dog_acoustic1"
+#)
 
-plot_dat <- results_f2 %>%
-  filter(
-    term %in% terms_keep |
-      term %in% c("gap_white_ambient", "gap_blinddog_inter", "gap_bark_inter", "gap")
-  )
+#plot_dat <- results_f2 %>%
+#  filter(
+#    term %in% terms_keep |
+#      term %in% c("gap_white_ambient", "gap_blinddog_inter", "gap_bark_inter", "gap")
+#  )
 
-plot_dat <- plot_dat %>%
-  mutate(
-    group = factor(group,
-                   levels = c("Human", "Dog", "Interaction", "Control"))
-  )
+#plot_dat <- plot_dat %>%
+#  mutate(
+#    group = factor(group,
+#                   levels = c("Human", "Dog", "Interaction", "Control"))
+#  )
 
-print(plot_dat)
+#print(plot_dat)
 
 
 
 # 800*500で作成
-ggplot(plot_dat, aes(x = estimate, y = term, color = group)) +
-  geom_point(size = 4) +  
-  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 1) +  
-  labs(
-       y = NULL,
-       x = "Effect size") +
-  geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-20, 20)) +
-  theme_classic(base_size = 20) +
-  scale_y_discrete(
-    labels = c("noise_acoustic1" = "White noise",
-               "dog_visual1" = "Dog visual",
-               "blinddog_visual1" = "Covered-dog visual",
-               "human_acoustic1" = "Human voice",
-               "dog_acoustic1" = "Dog bark",
-               "dog_visual1:dog_acoustic1" = "Dog visual + Dog bark",
-               "dog_visual1:human_acoustic1" = "Dog visual + Human voice",
-               "gap_white_ambient"         = "",
-               "gap_blinddog_inter"        = "",
-               "gap_bark_inter"            = "",
-               "gap" = "")
-  ) +
-  scale_color_manual(
-    name   = "Group",
-    values = c(
-      "Control"     = "grey40",
-      "Human"       = "#FF4B00",
-      "Dog"         = "#005AFF",
-      "Interaction" = "#03AF7A"
-    ),
-    na.translate = FALSE   
-  )
+#ggplot(plot_dat, aes(x = estimate, y = term, color = group)) +
+#  geom_point(size = 4) +  
+#  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 1) +  
+#  labs(
+#       y = NULL,
+#       x = "Effect size") +
+#  geom_vline(xintercept = 0, linetype = "dotted") +
+#  coord_cartesian(xlim = c(-20, 20)) +
+#  theme_classic(base_size = 20) +
+#  scale_y_discrete(
+#    labels = c("noise_acoustic1" = "White noise",
+#               "dog_visual1" = "Dog visual",
+#               "blinddog_visual1" = "Covered-dog visual",
+#               "human_acoustic1" = "Human voice",
+#               "dog_acoustic1" = "Dog bark",
+#               "dog_visual1:dog_acoustic1" = "Dog visual + Dog bark",
+#               "dog_visual1:human_acoustic1" = "Dog visual + Human voice",
+#               "gap_white_ambient"         = "",
+#               "gap_blinddog_inter"        = "",
+#               "gap_bark_inter"            = "",
+#               "gap" = "")
+#  ) +
+#  scale_color_manual(
+#    name   = "Group",
+#    values = c(
+#     "Control"     = "grey40",
+#      "Human"       = "#FF4B00",
+#      "Dog"         = "#005AFF",
+#      "Interaction" = "#03AF7A"
+#    ),
+#    na.translate = FALSE   
+#  )
 
 
 # ほかの変数
-terms_keep_2 <- c(
-  "log_light",
-  "seasonNonMating",
-  "SD",
-  "noise",
-  "flock",
-  "AvgWind"
-)
+#terms_keep_2 <- c(
+#  "log_light",
+#  "seasonNonMating",
+#  "SD",
+#  "noise",
+#  "flock",
+#  "AvgWind"
+#)
 
-plot_dat_2 <- results_f2 %>%
-  filter(
-    term %in% terms_keep_2
-    )
+#plot_dat_2 <- results_f2 %>%
+#  filter(
+#    term %in% terms_keep_2
+#    )
 
 
 
 # 800*500で作成# 800*500で作成# 800*500で作成
-ggplot(plot_dat_2, aes(x = estimate, y = term)) +
-  geom_point(size = 4) +  
-  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2, linewidth = 1) +  
-  labs(
-    y = NULL,
-    x = "Effect size") +
-  geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-7, 13)) +
-  theme_classic(base_size = 20) +
-  scale_y_discrete(
-    labels = c(
-               "log_light" = "Ambient light level",
-               "seasonNonMating" = "Postmating season",
-               "SD" = "Start distance",
-               "noise" = "Environmental noise",
-               "flock" = "Flock size",
-               "AvgWind" = "Average wind speed")
-  ) 
+#ggplot(plot_dat_2, aes(x = estimate, y = term)) +
+##  geom_point(size = 4) +  
+#  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2, linewidth = 1) +  
+#  labs(
+#    y = NULL,
+#    x = "Effect size") +
+#  geom_vline(xintercept = 0, linetype = "dotted") +
+#  coord_cartesian(xlim = c(-7, 13)) +
+#  theme_classic(base_size = 20) +
+#  scale_y_discrete(
+#    labels = c(
+#               "log_light" = "Ambient light level",
+#               "seasonNonMating" = "Postmating season",
+#               "SD" = "Start distance",
+#               "noise" = "Environmental noise",
+##               "flock" = "Flock size",
+#               "AvgWind" = "Average wind speed")
+#  ) 
 
 
 # FIDの推定値出す
@@ -485,7 +514,6 @@ emm_df <- as.data.frame(emmeans_FID)
 
 sub_8 <- subset(
   emm_df,
-  # 1) Intercept: 全部 "0"
   (dog_visual == "0" & blinddog_visual == "0" & human_acoustic == "0" &
      dog_acoustic == "0" & noise_acoustic == "0") |
     # 2) dog_visual1: dog_visual="1"のみ
@@ -508,6 +536,10 @@ sub_8 <- subset(
        dog_acoustic == "0" & noise_acoustic == "0") |
     # 8) dog_visual1:dog_acoustic1
     (dog_visual == "1" & blinddog_visual == "0" & human_acoustic == "0" &
+       dog_acoustic == "1" & noise_acoustic == "0") |
+    (dog_visual == "1" & blinddog_visual == "0" & human_acoustic == "0" &
+       dog_acoustic == "0" & noise_acoustic == "1") |
+    (dog_visual == "0" & blinddog_visual == "1" & human_acoustic == "0" &
        dog_acoustic == "1" & noise_acoustic == "0")
 )
 
@@ -533,7 +565,13 @@ sub_8 <- sub_8 %>%
         "dog_visual1:human_acoustic1",
       dog_visual == "1" & dog_acoustic == "1" &
         blinddog_visual == "0" & human_acoustic == "0" & noise_acoustic == "0" ~
-        "dog_visual1:dog_acoustic1"
+        "dog_visual1:dog_acoustic1",
+      dog_visual == "1" & dog_acoustic == "0" &
+        blinddog_visual == "0" & human_acoustic == "0" & noise_acoustic == "1" ~
+        "dog_visual1:noise_acoustic1",
+      dog_visual == "0" & dog_acoustic == "1" &
+        blinddog_visual == "1" & human_acoustic == "0" & noise_acoustic == "0" ~
+        "blinddog_visual1:dog_acoustic1"
     ),
     scenario = factor(
       scenario,
@@ -544,7 +582,9 @@ sub_8 <- sub_8 %>%
                  "dog_acoustic1",
                  "noise_acoustic1",
                  "dog_visual1:human_acoustic1",
-                 "dog_visual1:dog_acoustic1")
+                 "dog_visual1:dog_acoustic1",
+                 "dog_visual1:noise_acoustic1",
+                 "blinddog_visual1:dog_acoustic1")
     )
   )
 
@@ -558,31 +598,37 @@ sub_8 <- sub_8 %>%
       scenario %in% c("dog_visual1",
                       "dog_acoustic1")                ~ "Dog",
       scenario %in% c("dog_visual1:human_acoustic1",
-                      "dog_visual1:dog_acoustic1")    ~ "Interaction",
+                      "dog_visual1:dog_acoustic1",
+                      "dog_visual1:noise_acoustic1",
+                      "blinddog_visual1:dog_acoustic1")    ~ "Interaction",
       scenario == "Intercept" ~ "Baseline" 
     ),
     group = factor(group, levels = c("Baseline", "Human", "Dog", "Interaction", "Control")),
     
     # x軸ラベル用
     scenario_lab = case_when(
-      scenario == "Intercept"                    ~ "Baseline",
+      scenario == "Intercept"                    ~ "Baseline(Human visual only)",
       scenario == "dog_visual1"                  ~ "Dog visual",
       scenario == "blinddog_visual1"             ~ "Covered-dog visual",
       scenario == "human_acoustic1"              ~ "Human voice",
       scenario == "dog_acoustic1"                ~ "Dog bark",
       scenario == "noise_acoustic1"              ~ "White noise",
       scenario == "dog_visual1:human_acoustic1"  ~ "Dog visual + Human voice",
-      scenario == "dog_visual1:dog_acoustic1"    ~ "Dog visual + Dog bark"
+      scenario == "dog_visual1:dog_acoustic1"    ~ "Dog visual + Dog bark",
+      scenario == "dog_visual1:noise_acoustic1"  ~ "Dog visual + White noise",
+      scenario == "blinddog_visual1:dog_acoustic1" ~ "Covered-dog visual + Dog bark"
     ),
     scenario_lab = factor(
       scenario_lab,
       levels = c(
-        "Baseline",
+        "Baseline(Human visual only)",
         "Human voice",
         "Dog visual",
         "Dog bark",
         "Dog visual + Dog bark",
         "Dog visual + Human voice",
+        "Dog visual + White noise",
+        "Covered-dog visual + Dog bark",
         "Covered-dog visual",
         "White noise"
       )
@@ -622,20 +668,25 @@ ggplot(sub_8, aes(x = scenario_lab, y = emmean, color = group)) +
 
 # AD ####
 Deer_model_AD <- lmer(
-  AD ~ dog_visual + blinddog_visual + human_acoustic + dog_acoustic + dog_visual:human_acoustic + dog_visual:dog_acoustic + noise_acoustic + log_light + SD + flock + AvgWind + season + 
+  AD ~ dog_visual + 
+    blinddog_visual + 
+    human_acoustic + 
+    dog_acoustic + 
+    dog_visual:human_acoustic + 
+    dog_visual:dog_acoustic +
+    dog_visual:noise_acoustic +
+    dog_acoustic:blinddog_visual +
+    noise_acoustic + 
+    log_light +
+    SD + 
+    flock +
+    AvgWind + 
+    season +  
     (1 | site_number_home),
   data = Deer
 )
 # 結果の確認
 summary(Deer_model_AD)
-
-# 相互作用項の確認
-X <- model.matrix(Deer_model_AD)
-X_interaction <- X[, "dog_visual1:human_acoustic1"]
-print(X_interaction)
-
-Deer_with_interaction <- cbind(Deer, interaction_value = X_interaction)
-View(Deer_with_interaction)
 
 library(performance)
 # 決定係数の確認
@@ -657,55 +708,223 @@ results_AD <- data.frame(
 # NAの行を削除
 results_AD <- na.omit(results_AD)
 
-results_AD_f <- results_AD
+# ADの推定値出す
+library(emmeans)
 
-results_AD_f <- results_AD_f %>%
-  mutate(color = ifelse(lwr > 0, "#D55E00", "black"))
+emmeans_AD <- emmeans(
+  Deer_model_AD,
+  ~ dog_visual * blinddog_visual * human_acoustic * dog_acoustic * noise_acoustic)
 
-results_AD_f <- results_AD_f %>%
-  mutate(term = factor(term, levels = c(
-    "seasonNonMating",
-    "AvgWind",
-    "flock",
-    "SD",
-    "noise",
-    "log_light",
-    "dog_visual1:human_acoustic1",
-    "dog_visual1:dog_acoustic1",
-    "noise_acoustic1",
-    "dog_acoustic1",
-    "human_acoustic1",
-    "blinddog_visual1",
-    "dog_visual1",
-    "(Intercept)"
-  )))
+plot(emmeans_AD)
+emm_df_AD <- as.data.frame(emmeans_AD)
+
+
+sub_AD <- subset(
+  emm_df_AD,
+  (dog_visual == "0" & blinddog_visual == "0" & human_acoustic == "0" &
+     dog_acoustic == "0" & noise_acoustic == "0") |
+    # 2) dog_visual1: dog_visual="1"のみ
+    (dog_visual == "1" & blinddog_visual == "0" & human_acoustic == "0" &
+       dog_acoustic == "0" & noise_acoustic == "0") |
+    # 3) blinddog_visual1
+    (dog_visual == "0" & blinddog_visual == "1" & human_acoustic == "0" &
+       dog_acoustic == "0" & noise_acoustic == "0") |
+    # 4) human_acoustic1
+    (dog_visual == "0" & blinddog_visual == "0" & human_acoustic == "1" &
+       dog_acoustic == "0" & noise_acoustic == "0") |
+    # 5) dog_acoustic1
+    (dog_visual == "0" & blinddog_visual == "0" & human_acoustic == "0" &
+       dog_acoustic == "1" & noise_acoustic == "0") |
+    # 6) noise_acoustic1
+    (dog_visual == "0" & blinddog_visual == "0" & human_acoustic == "0" &
+       dog_acoustic == "0" & noise_acoustic == "1") |
+    # 7) dog_visual1:human_acoustic1
+    (dog_visual == "1" & blinddog_visual == "0" & human_acoustic == "1" &
+       dog_acoustic == "0" & noise_acoustic == "0") |
+    # 8) dog_visual1:dog_acoustic1
+    (dog_visual == "1" & blinddog_visual == "0" & human_acoustic == "0" &
+       dog_acoustic == "1" & noise_acoustic == "0") |
+    (dog_visual == "1" & blinddog_visual == "0" & human_acoustic == "0" &
+       dog_acoustic == "0" & noise_acoustic == "1") |
+    (dog_visual == "0" & blinddog_visual == "1" & human_acoustic == "0" &
+       dog_acoustic == "1" & noise_acoustic == "0")
+)
+
+library(dplyr)
+
+sub_AD <- sub_AD %>%
+  mutate(
+    scenario = case_when(
+      dog_visual == "0" & blinddog_visual == "0" & human_acoustic == "0" &
+        dog_acoustic == "0" & noise_acoustic == "0" ~ "Intercept",
+      dog_visual == "1" & blinddog_visual == "0" & human_acoustic == "0" &
+        dog_acoustic == "0" & noise_acoustic == "0" ~ "dog_visual1",
+      blinddog_visual == "1" & dog_visual == "0" & human_acoustic == "0" &
+        dog_acoustic == "0" & noise_acoustic == "0" ~ "blinddog_visual1",
+      human_acoustic == "1" & dog_visual == "0" & blinddog_visual == "0" &
+        dog_acoustic == "0" & noise_acoustic == "0" ~ "human_acoustic1",
+      dog_acoustic == "1" & dog_visual == "0" & blinddog_visual == "0" &
+        human_acoustic == "0" & noise_acoustic == "0" ~ "dog_acoustic1",
+      noise_acoustic == "1" & dog_visual == "0" & blinddog_visual == "0" &
+        human_acoustic == "0" & dog_acoustic == "0" ~ "noise_acoustic1",
+      dog_visual == "1" & human_acoustic == "1" &
+        blinddog_visual == "0" & dog_acoustic == "0" & noise_acoustic == "0" ~
+        "dog_visual1:human_acoustic1",
+      dog_visual == "1" & dog_acoustic == "1" &
+        blinddog_visual == "0" & human_acoustic == "0" & noise_acoustic == "0" ~
+        "dog_visual1:dog_acoustic1",
+      dog_visual == "1" & dog_acoustic == "0" &
+        blinddog_visual == "0" & human_acoustic == "0" & noise_acoustic == "1" ~
+        "dog_visual1:noise_acoustic1",
+      dog_visual == "0" & dog_acoustic == "1" &
+        blinddog_visual == "1" & human_acoustic == "0" & noise_acoustic == "0" ~
+        "blinddog_visual1:dog_acoustic1"
+    ),
+    scenario = factor(
+      scenario,
+      levels = c("Intercept",
+                 "dog_visual1",
+                 "blinddog_visual1",
+                 "human_acoustic1",
+                 "dog_acoustic1",
+                 "noise_acoustic1",
+                 "dog_visual1:human_acoustic1",
+                 "dog_visual1:dog_acoustic1",
+                 "dog_visual1:noise_acoustic1",
+                 "blinddog_visual1:dog_acoustic1")
+    )
+  )
+
+print(sub_AD)
+
+sub_AD <- sub_AD %>%
+  mutate(
+    group = case_when(
+      scenario %in% c("blinddog_visual1", "noise_acoustic1") ~ "Control",
+      scenario == "human_acoustic1"                   ~ "Human",
+      scenario %in% c("dog_visual1",
+                      "dog_acoustic1")                ~ "Dog",
+      scenario %in% c("dog_visual1:human_acoustic1",
+                      "dog_visual1:dog_acoustic1",
+                      "dog_visual1:noise_acoustic1",
+                      "blinddog_visual1:dog_acoustic1")    ~ "Interaction",
+      scenario == "Intercept" ~ "Baseline" 
+    ),
+    group = factor(group, levels = c("Baseline", "Human", "Dog", "Interaction", "Control")),
+    
+    # x軸ラベル用
+    scenario_lab = case_when(
+      scenario == "Intercept"                    ~ "Baseline(Human visual only)",
+      scenario == "dog_visual1"                  ~ "Dog visual",
+      scenario == "blinddog_visual1"             ~ "Covered-dog visual",
+      scenario == "human_acoustic1"              ~ "Human voice",
+      scenario == "dog_acoustic1"                ~ "Dog bark",
+      scenario == "noise_acoustic1"              ~ "White noise",
+      scenario == "dog_visual1:human_acoustic1"  ~ "Dog visual + Human voice",
+      scenario == "dog_visual1:dog_acoustic1"    ~ "Dog visual + Dog bark",
+      scenario == "dog_visual1:noise_acoustic1"  ~ "Dog visual + White noise",
+      scenario == "blinddog_visual1:dog_acoustic1" ~ "Covered-dog visual + Dog bark"
+    ),
+    scenario_lab = factor(
+      scenario_lab,
+      levels = c(
+        "Baseline(Human visual only)",
+        "Human voice",
+        "Dog visual",
+        "Dog bark",
+        "Dog visual + Dog bark",
+        "Dog visual + Human voice",
+        "Dog visual + White noise",
+        "Covered-dog visual + Dog bark",
+        "Covered-dog visual",
+        "White noise"
+      )
+    )
+  )
+
+
+library(ggplot2)
+
+ggplot(sub_AD, aes(x = scenario_lab, y = emmean, color = group)) +
+  geom_point(size = 4) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2, linewidth = 1) +
+  xlab(NULL) +
+  ylab("Predicted AD (m)") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_color_manual(
+    name   = "Group",
+    values = c(
+      "Control"     = "grey40",
+      "Human"       = "#FF4B00",
+      "Dog"         = "#005AFF",
+      "Interaction" = "#03AF7A",
+      "Baseline" = "black"
+    ),
+    na.translate = FALSE
+  )
+
+
+
+
+
+
+
+
+
+
+
+#results_AD_f <- results_AD
+
+#results_AD_f <- results_AD_f %>%
+#  mutate(color = ifelse(lwr > 0, "#D55E00", "black"))
+
+#results_AD_f <- results_AD_f %>%
+#  mutate(term = factor(term, levels = c(
+#    "seasonNonMating",
+#    "AvgWind",
+#    "flock",
+#    "SD",
+#    "noise",
+#    "log_light",
+#    "dog_visual1:human_acoustic1",
+#    "dog_visual1:dog_acoustic1",
+#    "noise_acoustic1",
+#    "dog_acoustic1",
+#    "human_acoustic1",
+#    "blinddog_visual1",
+#    "dog_visual1",
+#    "(Intercept)"
+#  )))
 
 # 800*500で作成
-ggplot(results_AD_f, aes(x = estimate, y = term, color = color)) +
-  geom_point(size = 5) +  
-  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  
-  labs(
-    y = "Explanatory variables",
-    x = "Estimated coefficients") +
-  geom_vline(xintercept = 0, linetype = "dotted") +
-  coord_cartesian(xlim = c(-40, 40)) +
-  theme_classic(base_size = 32) +
-  scale_y_discrete(
-    labels = c("noise_acoustic1" = "White noise",
-               "dog_visual1" = "Dog visual cue",
-               "blinddog_visual1" = "Covered dog visual cue",
-               "human_acoustic1" = "Human acoustic cue",
-               "dog_acoustic1" = "Dog acoustic cue",
-               "dog_visual1:dog_acoustic1" = "Interaction between dog visual and dog acoustic cue",
-               "dog_visual1:human_acoustic1" = "Interaction between dog visual and human acoustic cue",
-               "log_light" = "Ambient light level",
-               "seasonNonMating" = "Postmating season",
-               "SD" = "Start distance",
-               "noise" = "Environmental noise",
-               "flock" = "Flock size",
-               "AvgWind" = "Average wind speed")
-  ) +
-  scale_color_identity()
+#ggplot(results_AD_f, aes(x = estimate, y = term, color = color)) +
+#  geom_point(size = 5) +  
+#  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.3, linewidth = 2) +  
+#  labs(
+#    y = "Explanatory variables",
+#    x = "Estimated coefficients") +
+#  geom_vline(xintercept = 0, linetype = "dotted") +
+#  coord_cartesian(xlim = c(-40, 40)) +
+#  theme_classic(base_size = 32) +
+#  scale_y_discrete(
+#    labels = c("noise_acoustic1" = "White noise",
+#               "dog_visual1" = "Dog visual cue",
+#               "blinddog_visual1" = "Covered dog visual cue",
+#               "human_acoustic1" = "Human acoustic cue",
+#               "dog_acoustic1" = "Dog acoustic cue",
+#               "dog_visual1:dog_acoustic1" = "Interaction between dog visual and dog acoustic cue",
+#               "dog_visual1:human_acoustic1" = "Interaction between dog visual and human acoustic cue",
+#               "log_light" = "Ambient light level",
+#               "seasonNonMating" = "Postmating season",
+#               "SD" = "Start distance",
+#               "noise" = "Environmental noise",
+#               "flock" = "Flock size",
+#               "AvgWind" = "Average wind speed")
+#  ) +
+#  scale_color_identity()
+
+
 
 
 #####
