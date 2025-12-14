@@ -594,25 +594,25 @@ sub_8 <- sub_8 %>%
     
     # x軸ラベル用
     scenario_lab = case_when(
-      scenario == "Intercept"                    ~ "Baseline(Human visual only)",
-      scenario == "dog_visual1"                  ~ "Dog visual",
-      scenario == "blinddog_visual1"             ~ "Covered-dog visual",
+      scenario == "Intercept"                    ~ "Baseline(Human presence only)",
+      scenario == "dog_visual1"                  ~ "Dog decoy",
+      scenario == "blinddog_visual1"             ~ "Covered-dog decoy",
       scenario == "human_acoustic1"              ~ "Human voice",
       scenario == "dog_acoustic1"                ~ "Dog bark",
       scenario == "noise_acoustic1"              ~ "White noise",
-      scenario == "dog_visual1:human_acoustic1"  ~ "Dog visual + Human voice",
-      scenario == "dog_visual1:dog_acoustic1"    ~ "Dog visual + Dog bark"
+      scenario == "dog_visual1:human_acoustic1"  ~ "Dog decoy + Human voice",
+      scenario == "dog_visual1:dog_acoustic1"    ~ "Dog decoy + Dog bark"
     ),
     scenario_lab = factor(
       scenario_lab,
       levels = c(
-        "Baseline(Human visual only)",
+        "Baseline(Human presence only)",
         "Human voice",
-        "Dog visual",
+        "Dog decoy",
         "Dog bark",
-        "Dog visual + Human voice",
-        "Dog visual + Dog bark",
-        "Covered-dog visual",
+        "Dog decoy + Human voice",
+        "Dog decoy + Dog bark",
+        "Covered-dog decoy",
         "White noise"
       )
     )
@@ -621,24 +621,25 @@ sub_8 <- sub_8 %>%
 
 library(ggplot2)
 
-ggplot(sub_8, aes(x = scenario_lab, y = emmean, color = group)) +
+ggplot(sub_8, aes(x = scenario_lab, y = emmean)) +
   geom_point(size = 4) +
   geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2, linewidth = 1) +
   xlab(NULL) +
   ylab("Predicted FID (m)") +
   theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_color_manual(
-    name   = "Group",
-    values = c(
-      "Control"     = "grey40",
-      "Human"       = "#FF4B00",
-      "Dog"         = "#005AFF",
-      "Interaction" = "#03AF7A",
-      "Baseline" = "black"
-    ),
-    na.translate = FALSE
-  )
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.margin = margin(t = 5, r = 5, b = 5, l = 30)) 
+  #scale_color_manual(
+   # name   = "Group",
+    #values = c(
+     # "Control"     = "grey40",
+      #"Human"       = "#FF4B00",
+      #"Dog"         = "#005AFF",
+      #"Interaction" = "#03AF7A",
+      #"Baseline" = "black"
+    #),
+    #na.translate = FALSE
+  #)
 
 
 
@@ -779,24 +780,25 @@ sub_AD <- sub_AD %>%
     
     # x軸ラベル用
     scenario_lab = case_when(
-      scenario == "Intercept"                    ~ "Baseline(Human visual only)",
-      scenario == "dog_visual1"                  ~ "Dog visual",
-      scenario == "blinddog_visual1"             ~ "Covered-dog visual",
+      scenario == "Intercept"                    ~ "Baseline(Human presence only)",
+      scenario == "dog_visual1"                  ~ "Dog decoy",
+      scenario == "blinddog_visual1"             ~ "Covered-dog decoy",
       scenario == "human_acoustic1"              ~ "Human voice",
       scenario == "dog_acoustic1"                ~ "Dog bark",
       scenario == "noise_acoustic1"              ~ "White noise",
-      scenario == "dog_visual1:human_acoustic1"  ~ "Dog visual + Human voice",
-      scenario == "dog_visual1:dog_acoustic1"    ~ "Dog visual + Dog bark"    ),
+      scenario == "dog_visual1:human_acoustic1"  ~ "Dog decoy + Human voice",
+      scenario == "dog_visual1:dog_acoustic1"    ~ "Dog decoy + Dog bark"
+    ),
     scenario_lab = factor(
       scenario_lab,
       levels = c(
-        "Baseline(Human visual only)",
+        "Baseline(Human presence only)",
         "Human voice",
-        "Dog visual",
+        "Dog decoy",
         "Dog bark",
-        "Dog visual + Human voice",
-        "Dog visual + Dog bark",
-        "Covered-dog visual",
+        "Dog decoy + Human voice",
+        "Dog decoy + Dog bark",
+        "Covered-dog decoy",
         "White noise"
       )
     )
@@ -805,24 +807,26 @@ sub_AD <- sub_AD %>%
 
 library(ggplot2)
 
-ggplot(sub_AD, aes(x = scenario_lab, y = emmean, color = group)) +
+ggplot(sub_AD, aes(x = scenario_lab, y = emmean)) +
   geom_point(size = 4) +
   geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2, linewidth = 1) +
   xlab(NULL) +
   ylab("Predicted AD (m)") +
   theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_color_manual(
-    name   = "Group",
-    values = c(
-      "Control"     = "grey40",
-      "Human"       = "#FF4B00",
-      "Dog"         = "#005AFF",
-      "Interaction" = "#03AF7A",
-      "Baseline" = "black"
-    ),
-    na.translate = FALSE
-  )
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.margin = margin(t = 5, r = 5, b = 5, l = 30)) 
+)
+  #scale_color_manual(
+   # name   = "Group",
+    #values = c(
+     # "Control"     = "grey40",
+      #"Human"       = "#FF4B00",
+      #"Dog"         = "#005AFF",
+      #"Interaction" = "#03AF7A",
+      #"Baseline" = "black"
+  #  ),
+  #  na.translate = FALSE
+  #)
 
 
 
