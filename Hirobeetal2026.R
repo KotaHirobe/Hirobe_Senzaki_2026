@@ -302,6 +302,7 @@ Deer_model <- lmer(
 
 # 結果の確認
 summary(Deer_model)
+signif(summary(Deer_model)$coefficients, 3)
 
 
 library(performance)
@@ -341,6 +342,9 @@ results <- data.frame(
 )
 # NAの行を削除
 results <- na.omit(results)
+print(results)
+signif(results$lwr, 3)
+signif(results$upr, 3)
 
 #results_f <- results
 
@@ -606,8 +610,8 @@ sub_8 <- sub_8 %>%
         "Human voice",
         "Dog visual",
         "Dog bark",
-        "Dog visual + Dog bark",
         "Dog visual + Human voice",
+        "Dog visual + Dog bark",
         "Covered-dog visual",
         "White noise"
       )
@@ -790,8 +794,8 @@ sub_AD <- sub_AD %>%
         "Human voice",
         "Dog visual",
         "Dog bark",
-        "Dog visual + Dog bark",
         "Dog visual + Human voice",
+        "Dog visual + Dog bark",
         "Covered-dog visual",
         "White noise"
       )
