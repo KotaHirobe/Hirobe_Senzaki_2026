@@ -689,6 +689,7 @@ results_AD <- data.frame(
 )
 # NAの行を削除
 results_AD <- na.omit(results_AD)
+print(results_AD)
 
 # ADの推定値出す
 library(emmeans)
@@ -815,7 +816,7 @@ ggplot(sub_AD, aes(x = scenario_lab, y = emmean)) +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         plot.margin = margin(t = 5, r = 5, b = 5, l = 30)) 
-)
+
   #scale_color_manual(
    # name   = "Group",
     #values = c(
