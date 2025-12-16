@@ -304,6 +304,16 @@ Deer_model <- lmer(
 summary(Deer_model)
 signif(summary(Deer_model)$coefficients, 3)
 
+library(lmerTest)
+
+Deer_model_p <- lmer(
+  FID ~ dog_visual + blinddog_visual + human_acoustic + dog_acoustic +
+    dog_visual:human_acoustic + dog_visual:dog_acoustic + noise_acoustic +
+    log_light + SD + flock + AvgWind + season + (1 | site_number_home),
+  data = Deer
+)
+
+summary(Deer_model_p)
 
 library(performance)
 # 決定係数の確認
@@ -330,6 +340,8 @@ vif(lm(FID ~
 
 # 信頼区間を計算
 conf_intervals_Deer <- confint(Deer_model)
+print(conf_intervals_Deer)
+
 conf_intervals_Deer <- conf_intervals_Deer[!rownames(conf_intervals_Deer) %in% c(".sig01", ".sig02",  ".sigma"), ]
 estimates <- summary(Deer_model)$coefficients
 
@@ -345,6 +357,9 @@ results <- na.omit(results)
 print(results)
 signif(results$lwr, 3)
 signif(results$upr, 3)
+
+
+
 
 #results_f <- results
 
@@ -670,6 +685,17 @@ Deer_model_AD <- lmer(
 # 結果の確認
 summary(Deer_model_AD)
 
+library(lmerTest)
+
+Deer_model_AD_p <- lmer(
+  AD ~ dog_visual + blinddog_visual + human_acoustic + dog_acoustic +
+    dog_visual:human_acoustic + dog_visual:dog_acoustic + noise_acoustic +
+    log_light + SD + flock + AvgWind + season + (1 | site_number_home),
+  data = Deer
+)
+
+summary(Deer_model_AD_p)
+
 library(performance)
 # 決定係数の確認
 model_r2_AD <- r2_nakagawa(Deer_model_AD)
@@ -677,6 +703,8 @@ print(model_r2_AD)
 
 # 信頼区間を計算 
 conf_intervals_Deer_AD <- confint(Deer_model_AD)
+print(conf_intervals_Deer_AD)
+
 conf_intervals_Deer_AD <- conf_intervals_Deer_AD[!rownames(conf_intervals_Deer_AD) %in% c(".sig01", ".sig02",  ".sigma"), ]
 estimates_AD <- summary(Deer_model_AD)$coefficients
 
