@@ -923,7 +923,14 @@ ggplot(sub_AD, aes(x = scenario_lab, y = emmean)) +
 #####
 #説明変数の分布をプロット
 ggplot(data = Deer, aes(x = cues, fill = day_or_night)) +
-  geom_bar(stat = "count")
+  geom_bar(stat = "count") +
+  xlab(NULL) +
+  ylab("Counts") +
+  theme_classic() +
+  labs(fill = NULL) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.margin = margin(t = 5, r = 5, b = 5, l = 30)) 
+
 
 table(Deer$day_or_night, by = Deer$cues)
 
@@ -935,7 +942,10 @@ ggplot(data = Deer, aes(x=cues, y=AD)) +
 
 ggplot(data = Deer, aes(x=cues, y=light)) +
   geom_boxplot(outliers = FALSE) +
-  geom_jitter()
+  geom_jitter() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.margin = margin(t = 5, r = 5, b = 5, l = 30)) 
+
 
 ggplot(data = Deer, aes(x = cues, y = flock)) +
   geom_boxplot(outliers = FALSE) +
