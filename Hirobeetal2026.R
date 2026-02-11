@@ -638,235 +638,81 @@ ggplot(data = Deer, aes(x = cues, fill = day_or_night)) +
   ylab("Counts") +
   theme_classic() +
   labs(fill = NULL) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        plot.margin = margin(t = 5, r = 5, b = 5, l = 30)) 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
 
-
-table(Deer$day_or_night, by = Deer$cues)
 
 ggplot(data = Deer, aes(x=cues, y=FID)) +
-  geom_boxplot()
+  geom_boxplot(outlier.colour = NA) +
+  geom_jitter(width = 0.2) +
+  xlab(NULL) +
+  ylab("FID (m)") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ggplot(data = Deer, aes(x=cues, y=AD)) +
-  geom_boxplot()
+  geom_boxplot(outlier.colour = NA) +
+  geom_jitter(width = 0.2) +
+  xlab(NULL) +
+  ylab("AD (m)") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ggplot(data = Deer, aes(x=cues, y=light)) +
-  geom_boxplot(outliers = FALSE) +
-  geom_jitter() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        plot.margin = margin(t = 5, r = 5, b = 5, l = 30)) 
+  geom_boxplot(outlier.colour = NA) +
+  geom_jitter(width = 0.2) +
+  xlab(NULL) +
+  ylab("Light intensity (lx)") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 
 ggplot(data = Deer, aes(x = cues, y = flock)) +
-  geom_boxplot(outliers = FALSE) +
-  geom_jitter()
+  geom_boxplot(outlier.colour = NA) +
+  geom_jitter(width = 0.2) +
+  xlab(NULL) +
+  ylab("Flock size") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ggplot(data = Deer, aes(x = cues, y = noise)) +
-  geom_boxplot(outliers = FALSE) +
-  geom_jitter()
+  geom_boxplot(outlier.colour = NA) +
+  geom_jitter(width = 0.2) +
+  xlab(NULL) +
+  ylab("Ambient noise level (dBA)") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggplot(data = Deer, aes(x = cues, y = time)) +
-  geom_boxplot(outliers = FALSE) +
-  geom_jitter()
-
-ggplot(data = Deer, aes(x = cues, y = day_count)) +
-  geom_boxplot(outliers = FALSE) +
-  geom_jitter()
 
 ggplot(data = Deer, aes(x = cues, y = SD)) +
-  geom_boxplot(outliers = TRUE)
+  geom_boxplot(outlier.colour = NA) +
+  geom_jitter(width = 0.2) +
+  xlab(NULL) +
+  ylab("SD (m)") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggplot(data = Deer, aes(x = cues, y = site_number)) +
-  geom_boxplot(outliers = FALSE) +
-  geom_jitter()
+ggplot(data = Deer, aes(x = cues, fill = season)) +
+  geom_bar(stat = "count")+
+  xlab(NULL) +
+  ylab("Season") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggplot(data = Deer, aes(x = season, y = FID)) +
-  geom_boxplot(outliers = FALSE) +
-  geom_jitter()
+ggplot(data = Deer, aes(x = cues, y = AvgWind)) +
+  geom_boxplot(outlier.colour = NA) +
+  geom_jitter(width = 0.2) +
+  xlab(NULL) +
+  ylab("Average wind speed (m/s)") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-
-#相関をプロット
-ggplot(data = Deer, aes(x = light, y = FID)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_bw()
-
-ggplot(data = Deer, aes(x = noise, y = FID)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_bw()
-
-ggplot(data = Deer, aes(x = flock, y = FID)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_bw()
-
-ggplot(data = Deer, aes(x = AvgWind, y = FID)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_bw()
+ggplot(data = Deer, aes(x = cues, y = MaxWind)) +
+  geom_boxplot(outlier.colour = NA) +
+  geom_jitter(width = 0.2) +
+  xlab(NULL) +
+  ylab("Maximum wind speed (m/s)") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 
-library(sf) # 地理データの操作用
-library(maps)
 
-# 日本地図の取得
-japan_map <- map_data("world", region = "Japan")
-
-# 日本地図のバウンディングボックス作成
-bbox <- st_bbox(c(xmin = 141.7, ymin = 42.5, xmax = 142.0, ymax = 42.8), crs = st_crs(4326))
-
-# バウンディングボックスを sf オブジェクトに変換
-bbox_sf <- st_as_sfc(bbox)
-
-# 10km² のグリッド作成
-grid <- st_make_grid(
-  bbox_sf,
-  cellsize = c(0.032, 0.044),  # 緯度・経度での10kmに相当する値（約0.1度）
-  what = "polygons"
-) %>%
-  st_as_sf()  # sf オブジェクトに変換
-
-
-ggplot() +
-  # 背景地図
-  geom_polygon(
-    data = japan_map,
-    aes(x = long, y = lat, group = group),
-    fill = "lightgray",
-    color = "black"
-  ) +
-  # site_number のプロット
-  geom_point(
-    data = Deer,
-    aes(x = longitude, y = latitude),
-    color = "black"
-  ) +
-  # ラベルの追加
-  geom_text(
-    data = Deer,
-    aes(x = longitude, y = latitude, label = site_number_home),
-    hjust = -0.2, vjust = -0.2, color = "blue"
-  ) +
-  # 表示範囲の指定
-  coord_cartesian(
-    xlim = c(141.7, 142),
-    ylim = c(42.5, 42.8)
-  ) +
-  # テーマとタイトル
-  theme_minimal() +
-  labs(
-    title = "Site Number Distribution on the Map",
-    x = "Longitude",
-    y = "Latitude"
-  )
-
-###
-#相関の図示
-# 数値データのみを抽出
-numeric_data <- Deer[sapply(Deer, is.numeric)]
-
-# 相関行列を計算
-cor_matrix <- cor(numeric_data, use = "complete.obs")
-print(cor_matrix)
-
-
-library(corrplot)
-
-# 相関行列のプロット
-corrplot(cor_matrix, method = "circle")
-
-# 必要なパッケージをロード
-library(dplyr)
-library(ggcorrplot)
-
-# 必要なパッケージをロード
-library(dplyr)
-library(ggcorrplot)
-
-# データの確認
-str(Deer)
-
-# カテゴリ変数のOne-hotエンコーディング
-cues_dummy <- model.matrix(~ cues - 1, data = Deer)
-weather_dummy <- model.matrix(~ weather - 1, data = Deer)
-day_or_night_dummy <- model.matrix(~ day_or_night - 1, data = Deer)
-season_dummy <- model.matrix(~ season - 1, data = Deer)
-
-# 対象列の選択と結合
-continuous_columns <- Deer %>% 
-  select(cloud, flock, FID, AD, SD, AvgWind, MaxWind, noise, light, moon)
-
-# 連続変数とエンコードされたカテゴリ変数を結合
-combined_data <- cbind(continuous_columns, cues_dummy, weather_dummy, day_or_night_dummy, season_dummy)
-
-# 相関行列の計算
-correlation_matrix <- cor(combined_data, use = "pairwise.complete.obs")
-
-# 相関行列の可視化
-ggcorrplot(correlation_matrix, lab = TRUE, lab_size = 3, title = "Correlation Matrix")
-
-# 必要なパッケージを読み込み
-library(sf)
-save_dir <- "c:/Users/kouch/OneDrive/デスクトップ/研究室関連/修士研究/データ" # フォルダパスを設定
-
-# 元のデータフレームをコピーして新しいオブジェクトに
-Deer_sf <- Deer
-
-# FIDという列が存在するか確認
-if ("FID" %in% names(Deer_sf)) {
-  names(Deer_sf)[names(Deer_sf) == "FID"] <- "original_FID"
-}
-
-Deer_sf <- st_as_sf(Deer_sf, coords = c("longitude", "latitude"), crs = 4326)
-
-# 既存のGeoPackageファイルを削除
-if (file.exists("Deer.gpkg")) {
-  unlink("Deer.gpkg")
-}
-
-save_path <- file.path(save_dir, "Deer.gpkg")
-
-# GeoPackage形式で保存
-st_write(Deer_sf, save_path, layer = "Deer_layer", delete_dsn = TRUE)
-
-
-#####
-# 予想結果図の作成
-
-# データフレームを作成
-# 推定値と信頼区間の値を手動で設定します
-data <- data.frame(
-  Pattern = c("Pattern3", "Pattern2", "Pattern1"),
-  Estimate = c(80, 70, 60),
-  LowerCI = c(76, 64, 54),
-  UpperCI = c(84, 78, 68),
-  Group = c("b", "ab", "a")
-)
-
-# ggplot2ライブラリを読み込み
-library(ggplot2)
-
-# プロットを作成
-ggplot(data, aes(y = Estimate, x = Pattern, ymin = LowerCI, ymax = UpperCI)) +
-  geom_pointrange(size = 1) + # 推定値と信頼区間を描画
-  geom_text(aes(label = Group), hjust = -1, size = 5) + # グループ記号を推定値の真下に表示
-  theme_bw(base_size = 16) +
-  labs(
-    title = "Predicting results",
-    y = "Estimate",
-    x = NULL
-  ) +
-  theme(
-    legend.position = "none" 
-  )
-
-# 平均と標準偏差の描画
-library(dplyr)
-
-Deer %>%
-  summarise(
-    across(c(flock, AvgWind, MaxWind, noise, light),
-           list(mean = mean, sd = sd), 
-           na.rm = TRUE)
-  )
