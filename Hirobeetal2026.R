@@ -407,25 +407,25 @@ sub_8 <- sub_8 %>%
     
     # x軸ラベル用
     scenario_lab = case_when(
-      scenario == "Intercept"                    ~ "Baseline(Human presence only)",
+      scenario == "Intercept"                    ~ "Baseline (Approaching surveyor only)",
       scenario == "dog_visual1"                  ~ "Dog decoy",
-      scenario == "blinddog_visual1"             ~ "Covered-dog decoy",
+      scenario == "blinddog_visual1"             ~ "Covered dog decoy",
       scenario == "human_acoustic1"              ~ "Human voice",
-      scenario == "dog_acoustic1"                ~ "Dog bark",
+      scenario == "dog_acoustic1"                ~ "Dog barking",
       scenario == "noise_acoustic1"              ~ "White noise",
       scenario == "dog_visual1:human_acoustic1"  ~ "Dog decoy + Human voice",
-      scenario == "dog_visual1:dog_acoustic1"    ~ "Dog decoy + Dog bark"
+      scenario == "dog_visual1:dog_acoustic1"    ~ "Dog decoy + Dog barking"
     ),
     scenario_lab = factor(
       scenario_lab,
       levels = c(
-        "Baseline(Human presence only)",
+        "Baseline (Approaching surveyor only)",
         "Human voice",
         "Dog decoy",
-        "Dog bark",
+        "Dog barking",
         "Dog decoy + Human voice",
-        "Dog decoy + Dog bark",
-        "Covered-dog decoy",
+        "Dog decoy + Dog barking",
+        "Covered dog decoy",
         "White noise"
       )
     )
@@ -590,25 +590,25 @@ sub_AD <- sub_AD %>%
     
     # x軸ラベル用
     scenario_lab = case_when(
-      scenario == "Intercept"                    ~ "Baseline(Human presence only)",
+      scenario == "Intercept"                    ~ "Baseline (Approaching surveyor only)",
       scenario == "dog_visual1"                  ~ "Dog decoy",
-      scenario == "blinddog_visual1"             ~ "Covered-dog decoy",
+      scenario == "blinddog_visual1"             ~ "Covered dog decoy",
       scenario == "human_acoustic1"              ~ "Human voice",
-      scenario == "dog_acoustic1"                ~ "Dog bark",
+      scenario == "dog_acoustic1"                ~ "Dog barking",
       scenario == "noise_acoustic1"              ~ "White noise",
       scenario == "dog_visual1:human_acoustic1"  ~ "Dog decoy + Human voice",
-      scenario == "dog_visual1:dog_acoustic1"    ~ "Dog decoy + Dog bark"
+      scenario == "dog_visual1:dog_acoustic1"    ~ "Dog decoy + Dog barking"
     ),
     scenario_lab = factor(
       scenario_lab,
       levels = c(
-        "Baseline(Human presence only)",
+        "Baseline (Approaching surveyor only)",
         "Human voice",
         "Dog decoy",
-        "Dog bark",
+        "Dog barking",
         "Dog decoy + Human voice",
-        "Dog decoy + Dog bark",
-        "Covered-dog decoy",
+        "Dog decoy + Dog barking",
+        "Covered dog decoy",
         "White noise"
       )
     )
