@@ -441,7 +441,7 @@ ggplot(sub_8, aes(x = scenario_lab, y = emmean)) +
   ylab("Predicted FID (m)") +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        plot.margin = margin(t = 5, r = 5, b = 5, l = 30)) 
+        plot.margin = margin(t = 5, r = 5, b = 5, l = 50)) 
 
 
 
@@ -624,7 +624,7 @@ ggplot(sub_AD, aes(x = scenario_lab, y = emmean)) +
   ylab("Predicted AD (m)") +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        plot.margin = margin(t = 5, r = 5, b = 5, l = 30)) 
+        plot.margin = margin(t = 5, r = 5, b = 5, l = 50)) 
 
 
 
