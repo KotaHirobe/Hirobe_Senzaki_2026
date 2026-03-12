@@ -152,8 +152,55 @@ library(ggplot2)
 ggplot() +
   geom_sf(data = grid, fill = NA, color = "gray") + # グリッド
   geom_sf(data = Deer_with_grid, aes(color = as.factor(site_number_home)), size = 3) + # ポイント
-  labs(color = "Site Number", title = "5000x5000m Grid Clustering") +
-  theme_minimal()
+  labs(color = "Location ID", title = NULL) +
+  theme_classic()
+
+library(sf)
+library(ggplot2)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+# 日本の都道府県レベル（admin-1）を取得
+jp_pref <- rnaturalearth::ne_states(country = "Japan", returnclass = "sf")
+
+# 北海道だけ抽出（name が "Hokkaido" のはず）
+hokkaido <- subset(jp_pref, name == "Hokkaidō")
+
+# CRS をまず揃える（grid を基準に）
+hokkaido2       <- st_transform(hokkaido, st_crs(grid))
+Deer_with_grid2 <- st_transform(Deer_with_grid, st_crs(grid))
+
+# bbox を「数値」で取り出す（ここがポイント）
+bb <- st_bbox(grid)
+
+ggplot() +
+  geom_sf(data = hokkaido2, fill = "gray95", color = "gray40", linewidth = 0.4) +
+  geom_sf(data = grid,      fill = NA,      color = "gray70", linewidth = 0.3) +
+  geom_sf(data = Deer_with_grid2, aes(color = as.factor(site_number_home)), size = 3) +
+  labs(color = "Location ID", title = NULL) +
+  theme_classic() +
+  coord_sf(
+    xlim = c(as.numeric(bb["xmin"]), as.numeric(bb["xmax"])),
+    ylim = c(as.numeric(bb["ymin"]), as.numeric(bb["ymax"])),
+    expand = TRUE
+  )  
+
+Deer_with_grid3 <- subset(Deer_with_grid2, FID <= 150)
+Deer_with_grid3 <- Deer_with_grid3 %>%
+  mutate(grid_id = match(grid_id, sort(unique(grid_id))))
+
+ggplot() +
+  geom_sf(data = hokkaido2, fill = "gray95", color = "gray40", linewidth = 0.4) +
+  geom_sf(data = grid,      fill = NA,      color = "gray70", linewidth = 0.3) +
+  geom_sf(data = Deer_with_grid3, aes(color = as.factor(grid_id)), size = 3) +
+  labs(color = "Location ID", title = NULL) +
+  theme_classic() +
+  coord_sf(
+    xlim = c(as.numeric(bb["xmin"]), as.numeric(bb["xmax"])),
+    ylim = c(as.numeric(bb["ymin"]), as.numeric(bb["ymax"])),
+    expand = TRUE
+  )  
+
 
 # 相関係数
 cor_vars <- Deer %>%
@@ -661,7 +708,7 @@ ggplot(data = Deer, aes(x=cues, y=light)) +
   geom_boxplot(outlier.colour = NA) +
   geom_jitter(width = 0.2) +
   xlab(NULL) +
-  ylab("Light intensity (lx)") +
+  ylab("Ambient light level (lx)") +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -670,7 +717,7 @@ ggplot(data = Deer, aes(x = cues, y = flock)) +
   geom_boxplot(outlier.colour = NA) +
   geom_jitter(width = 0.2) +
   xlab(NULL) +
-  ylab("Flock size") +
+  ylab("Group size") +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -687,14 +734,14 @@ ggplot(data = Deer, aes(x = cues, y = SD)) +
   geom_boxplot(outlier.colour = NA) +
   geom_jitter(width = 0.2) +
   xlab(NULL) +
-  ylab("SD (m)") +
+  ylab("Starting distance (m)") +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ggplot(data = Deer, aes(x = cues, fill = season)) +
   geom_bar(stat = "count")+
   xlab(NULL) +
-  ylab("Season") +
+  ylab("Season (rutting vs non-rutting)") +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -702,7 +749,7 @@ ggplot(data = Deer, aes(x = cues, y = AvgWind)) +
   geom_boxplot(outlier.colour = NA) +
   geom_jitter(width = 0.2) +
   xlab(NULL) +
-  ylab("Average wind speed (m/s)") +
+  ylab("Mean wind speed (m/s)") +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -714,5 +761,20 @@ ggplot(data = Deer, aes(x = cues, y = MaxWind)) +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+d <- density(Deer$FID)
+op <- par(mar = c(4.5, 4.5, 1.5, 1), las = 1)  
+plot(d,
+     main = NULL,
+     xlab = "FID (m)",
+     ylab = "Density",
+     lwd  = 2,
+     col  = "black")
 
-
+d2 <- density(Deer$AD)
+op <- par(mar = c(4.5, 4.5, 1.5, 1), las = 1)  
+plot(d2,
+     main = NULL,
+     xlab = "AD (m)",
+     ylab = "Density",
+     lwd  = 2,
+     col  = "black")
