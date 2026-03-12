@@ -734,7 +734,7 @@ ggplot(data = Deer, aes(x = cues, y = SD)) +
   geom_boxplot(outlier.colour = NA) +
   geom_jitter(width = 0.2) +
   xlab(NULL) +
-  ylab("Starting distance (m)") +
+  ylab("Starting distance (SD) (m)") +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
