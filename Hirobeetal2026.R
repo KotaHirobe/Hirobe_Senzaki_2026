@@ -1,7 +1,5 @@
 # 音量減衰の確認 ####
 Soundlevel <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_al_2026/refs/heads/main/Hirobeetal2026AcousticAttenuation.csv")
-# ローカルから読み込む用
-Soundlevel <- read.csv("Hirobeetal2026AcousticAttenuation.csv")
 
 print(head(Soundlevel))
 
@@ -675,6 +673,212 @@ ggplot(sub_AD, aes(x = scenario_lab, y = emmean)) +
 
 
 
+# FID単一キュー
+Deer_unimodal <- subset(Deer, dog_visual == 0 & blinddog_visual == 0 &
+                        human_acoustic == 0 & dog_acoustic == 0 & noise_acoustic == 0)
+View(Deer_unimodal)
+# lmer()でLMMを構築
+Deer_model_unimodal <- lm(
+  FID ~ 
+    log_light +
+    SD + 
+    flock +
+    AvgWind + 
+    season #+ 
+    #(1 | site_number_home),
+  ,data = Deer_unimodal
+)
+
+# 結果の確認
+summary(Deer_model_unimodal)
+signif(summary(Deer_model_unimodal)$coefficients, 3)
+
+library(performance)
+# 決定係数の確認
+model_r2 <- r2_nakagawa(Deer_model_unimodal)
+print(model_r2)
+
+
+# multimodal
+Deer_multimodal <- subset(Deer, dog_visual == 0 & blinddog_visual == 0 &
+                          dog_acoustic == 0 & noise_acoustic == 0)
+View(Deer_multimodal)
+# lmer()でLMMを構築
+Deer_model_multimodal <- lm(
+  FID ~ 
+    human_acoustic +
+    log_light +
+    SD + 
+    flock +
+    AvgWind + 
+    season #+ 
+    #(1 | site_number_home),
+  ,data = Deer_multimodal
+)
+
+# 結果の確認
+summary(Deer_model_multimodal)
+signif(summary(Deer_model_unimodal)$coefficients, 3)
+
+library(performance)
+# 決定係数の確認
+model_r2 <- r2_nakagawa(Deer_model_unimodal)
+print(model_r2)
+
+# イヌ単一キュー
+Deer_unimodal_dog <- subset(Deer, dog_visual == 1 & blinddog_visual == 0 &
+                          human_acoustic == 0 & dog_acoustic == 0 & noise_acoustic == 0)
+View(Deer_unimodal_dog)
+# lmer()でLMMを構築
+Deer_model_unimodal_dog <- lm(
+  FID ~ 
+    log_light +
+    SD + 
+    flock +
+    AvgWind + 
+    season 
+    #(1 | site_number_home),
+  ,data = Deer_unimodal_dog
+)
+
+# 結果の確認
+summary(Deer_model_unimodal_dog)
+signif(summary(Deer_model_unimodal_dog)$coefficients, 3)
+
+library(performance)
+# 決定係数の確認
+model_r2 <- r2_nakagawa(Deer_model_unimodal)
+print(model_r2)
+
+# イヌ複数キュー
+Deer_multimodal_dog <- subset(Deer, dog_visual == 1 & blinddog_visual == 0 &
+                          human_acoustic == 0 & noise_acoustic == 0)
+View(Deer_multimodal_dog)
+# lmer()でLMMを構築
+Deer_model_multimodal_dog <- lm(
+  FID ~ 
+    dog_acoustic +
+    log_light +
+    SD + 
+    flock +
+    AvgWind + 
+    season,
+    #(1 | site_number_home),
+  data = Deer_multimodal_dog
+)
+
+# 結果の確認
+summary(Deer_model_multimodal_dog)
+signif(summary(Deer_model_multimodal_dog)$coefficients, 3)
+
+library(performance)
+# 決定係数の確認
+model_r2 <- r2_nakagawa(Deer_model_unimodal)
+print(model_r2)
+
+
+# AD単一キュー
+Deer_unimodal <- subset(Deer, dog_visual == 0 & blinddog_visual == 0 &
+                          human_acoustic == 0 & dog_acoustic == 0 & noise_acoustic == 0)
+View(Deer_unimodal)
+# lmer()でLMMを構築
+Deer_model_unimodal <- lm(
+  AD ~ 
+    log_light +
+    SD + 
+    flock +
+    AvgWind + 
+    season #+ 
+  #(1 | site_number_home),
+  ,data = Deer_unimodal
+)
+
+# 結果の確認
+summary(Deer_model_unimodal)
+signif(summary(Deer_model_unimodal)$coefficients, 3)
+
+library(performance)
+# 決定係数の確認
+model_r2 <- r2_nakagawa(Deer_model_unimodal)
+print(model_r2)
+
+
+# multimodal
+Deer_multimodal <- subset(Deer, dog_visual == 0 & blinddog_visual == 0 &
+                            dog_acoustic == 0 & noise_acoustic == 0)
+View(Deer_multimodal)
+# lmer()でLMMを構築
+Deer_model_multimodal <- lm(
+  AD ~ 
+    human_acoustic +
+    log_light +
+    SD + 
+    flock +
+    AvgWind + 
+    season #+ 
+  #(1 | site_number_home),
+  ,data = Deer_multimodal
+)
+
+# 結果の確認
+summary(Deer_model_multimodal)
+signif(summary(Deer_model_unimodal)$coefficients, 3)
+
+library(performance)
+# 決定係数の確認
+model_r2 <- r2_nakagawa(Deer_model_unimodal)
+print(model_r2)
+
+# イヌ単一キュー
+Deer_unimodal_dog <- subset(Deer, dog_visual == 1 & blinddog_visual == 0 &
+                              human_acoustic == 0 & dog_acoustic == 0 & noise_acoustic == 0)
+View(Deer_unimodal_dog)
+# lmer()でLMMを構築
+Deer_model_unimodal_dog <- lm(
+  AD ~ 
+    log_light +
+    SD + 
+    flock +
+    AvgWind + 
+    season 
+  #(1 | site_number_home),
+  ,data = Deer_unimodal_dog
+)
+
+# 結果の確認
+summary(Deer_model_unimodal_dog)
+signif(summary(Deer_model_unimodal_dog)$coefficients, 3)
+
+library(performance)
+# 決定係数の確認
+model_r2 <- r2_nakagawa(Deer_model_unimodal)
+print(model_r2)
+
+# イヌ複数キュー
+Deer_multimodal_dog <- subset(Deer, dog_visual == 1 & blinddog_visual == 0 &
+                                human_acoustic == 0 & noise_acoustic == 0)
+View(Deer_multimodal_dog)
+# lmer()でLMMを構築
+Deer_model_multimodal_dog <- lm(
+  AD ~ 
+    dog_acoustic +
+    log_light +
+    SD + 
+    flock +
+    AvgWind + 
+    season,
+  #(1 | site_number_home),
+  data = Deer_multimodal_dog
+)
+
+# 結果の確認
+summary(Deer_model_multimodal_dog)
+signif(summary(Deer_model_multimodal_dog)$coefficients, 3)
+
+library(performance)
+# 決定係数の確認
+model_r2 <- r2_nakagawa(Deer_model_unimodal)
+print(model_r2)
 
 
 #####
