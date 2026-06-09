@@ -1,4 +1,4 @@
-# 音量減衰の確認 ####
+# Checking sound attenuation ####
 Soundlevel <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_al_2026/refs/heads/main/Hirobeetal2026AcousticAttenuation.csv")
 
 print(head(Soundlevel))
@@ -19,28 +19,26 @@ ggplot(long_data, aes(x = dist, y = value, color = variable, group = variable)) 
   theme_classic(base_size = 22)
 
 
-# Loaing the data ####
+# Loading the data ####
 merged_data <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_al_2026/refs/heads/main/Hirobeetal2026.csv")
-# ローカルから読み込む用
-merged_data <- read.csv("Hirobeetal2026.csv", colClasses = c(actime = "character"))
 
-# NAを消す
+# Delete NA
 merged_data <- na.omit(merged_data)
 
-# lightを数値として読み込み
+# Read "light" as a numeric value
 merged_data$light <- as.numeric(merged_data$light)
 
-# 日付(数値)を日時のデータに変換
+# Convert the date (numeric) to a datetime value
 merged_data$sunrise <- as.POSIXct(paste(merged_data$day, merged_data$sunrise))
 merged_data$sunset <- as.POSIXct(paste(merged_data$day, merged_data$sunset))
 merged_data$time <- as.POSIXct(paste(merged_data$day, merged_data$time))
 
-# 日付を経過日数に変換
+# Convert the date to elapsed days
 min_date <- min(merged_data$day, na.rm = TRUE)
 merged_data$day_count <- as.numeric(difftime(merged_data$day, min_date, units = "days")) +1
 head(merged_data)
 
-# 昼と夜を分ける
+# Separating daytime and night-time
 merged_data$day_or_night <- ifelse(merged_data$time >= merged_data$sunrise & merged_data$time <= merged_data$sunset,
                                "day",
                                ifelse(merged_data$time > merged_data$sunset | merged_data$time < merged_data$sunrise,
@@ -49,20 +47,20 @@ merged_data$day_or_night <- ifelse(merged_data$time >= merged_data$sunrise & mer
 print(head(merged_data))
 table(merged_data$day_or_night)
 
-#時間データを小数にする
+# Convert the time to a decimal value
 library(lubridate)
 merged_data$time_num <- hour(merged_data$time) + minute(merged_data$time)/60
 
 
 
 
-# site_numberの設定 ####
+# Assign site numbers to each observation ####
 library(geosphere)
 
-# 新しい列 "site_number" を追加し、初期値をNAに設定
+# Add a new column "site_number" with initial values set to NA
 merged_data$site_number <- NA
 
-# 半径150m以内の座標に番号を付与
+# Assign the same ID to coordinates within a 150 m radius
 for (i in 1:nrow(merged_data)) {
   current_coords <- c(merged_data$longitude[i], merged_data$latitude[i])
   distances <- distHaversine(current_coords, 
@@ -71,7 +69,7 @@ for (i in 1:nrow(merged_data)) {
   merged_data$site_number[within_radius] <- i
 }
 
-# 重複を解消して連続した番号にする
+# Resolve duplicates and assign consecutive numbers
 unique_sites <- unique(na.omit(merged_data$site_number))
 merged_data$site_number <- match(merged_data$site_number, unique_sites)
 
@@ -678,7 +676,7 @@ Deer_unimodal <- subset(Deer, dog_visual == 0 & blinddog_visual == 0 &
                         human_acoustic == 0 & dog_acoustic == 0 & noise_acoustic == 0)
 View(Deer_unimodal)
 # lmer()でLMMを構築
-Deer_model_unimodal <- lm(
+Deer_model_unimodal_FID <- lm(
   FID ~ 
     log_light +
     SD + 
@@ -690,13 +688,8 @@ Deer_model_unimodal <- lm(
 )
 
 # 結果の確認
-summary(Deer_model_unimodal)
-signif(summary(Deer_model_unimodal)$coefficients, 3)
-
-library(performance)
-# 決定係数の確認
-model_r2 <- r2_nakagawa(Deer_model_unimodal)
-print(model_r2)
+summary(Deer_model_unimodal_FID)
+signif(summary(Deer_model_unimodal_FID)$coefficients, 3)
 
 
 # multimodal
@@ -704,7 +697,7 @@ Deer_multimodal <- subset(Deer, dog_visual == 0 & blinddog_visual == 0 &
                           dog_acoustic == 0 & noise_acoustic == 0)
 View(Deer_multimodal)
 # lmer()でLMMを構築
-Deer_model_multimodal <- lm(
+Deer_model_multimodal_FID <- lm(
   FID ~ 
     human_acoustic +
     log_light +
@@ -717,20 +710,16 @@ Deer_model_multimodal <- lm(
 )
 
 # 結果の確認
-summary(Deer_model_multimodal)
-signif(summary(Deer_model_unimodal)$coefficients, 3)
+summary(Deer_model_multimodal_FID)
+signif(summary(Deer_model_unimodal_FID)$coefficients, 3)
 
-library(performance)
-# 決定係数の確認
-model_r2 <- r2_nakagawa(Deer_model_unimodal)
-print(model_r2)
 
 # イヌ単一キュー
 Deer_unimodal_dog <- subset(Deer, dog_visual == 1 & blinddog_visual == 0 &
                           human_acoustic == 0 & dog_acoustic == 0 & noise_acoustic == 0)
 View(Deer_unimodal_dog)
 # lmer()でLMMを構築
-Deer_model_unimodal_dog <- lm(
+Deer_model_unimodal_dog_FID <- lm(
   FID ~ 
     log_light +
     SD + 
@@ -742,20 +731,16 @@ Deer_model_unimodal_dog <- lm(
 )
 
 # 結果の確認
-summary(Deer_model_unimodal_dog)
-signif(summary(Deer_model_unimodal_dog)$coefficients, 3)
+summary(Deer_model_unimodal_dog_FID)
+signif(summary(Deer_model_unimodal_dog_FID)$coefficients, 3)
 
-library(performance)
-# 決定係数の確認
-model_r2 <- r2_nakagawa(Deer_model_unimodal)
-print(model_r2)
 
 # イヌ複数キュー
 Deer_multimodal_dog <- subset(Deer, dog_visual == 1 & blinddog_visual == 0 &
                           human_acoustic == 0 & noise_acoustic == 0)
 View(Deer_multimodal_dog)
 # lmer()でLMMを構築
-Deer_model_multimodal_dog <- lm(
+Deer_model_multimodal_dog_FID <- lm(
   FID ~ 
     dog_acoustic +
     log_light +
@@ -768,13 +753,9 @@ Deer_model_multimodal_dog <- lm(
 )
 
 # 結果の確認
-summary(Deer_model_multimodal_dog)
-signif(summary(Deer_model_multimodal_dog)$coefficients, 3)
+summary(Deer_model_multimodal_dog_FID)
+signif(summary(Deer_model_multimodal_dog_FID)$coefficients, 3)
 
-library(performance)
-# 決定係数の確認
-model_r2 <- r2_nakagawa(Deer_model_unimodal)
-print(model_r2)
 
 
 # AD単一キュー
@@ -782,7 +763,7 @@ Deer_unimodal <- subset(Deer, dog_visual == 0 & blinddog_visual == 0 &
                           human_acoustic == 0 & dog_acoustic == 0 & noise_acoustic == 0)
 View(Deer_unimodal)
 # lmer()でLMMを構築
-Deer_model_unimodal <- lm(
+Deer_model_unimodal_AD <- lm(
   AD ~ 
     log_light +
     SD + 
@@ -794,13 +775,9 @@ Deer_model_unimodal <- lm(
 )
 
 # 結果の確認
-summary(Deer_model_unimodal)
-signif(summary(Deer_model_unimodal)$coefficients, 3)
+summary(Deer_model_unimodal_AD)
+signif(summary(Deer_model_unimodal_AD)$coefficients, 3)
 
-library(performance)
-# 決定係数の確認
-model_r2 <- r2_nakagawa(Deer_model_unimodal)
-print(model_r2)
 
 
 # multimodal
@@ -808,7 +785,7 @@ Deer_multimodal <- subset(Deer, dog_visual == 0 & blinddog_visual == 0 &
                             dog_acoustic == 0 & noise_acoustic == 0)
 View(Deer_multimodal)
 # lmer()でLMMを構築
-Deer_model_multimodal <- lm(
+Deer_model_multimodal_AD <- lm(
   AD ~ 
     human_acoustic +
     log_light +
@@ -821,20 +798,17 @@ Deer_model_multimodal <- lm(
 )
 
 # 結果の確認
-summary(Deer_model_multimodal)
-signif(summary(Deer_model_unimodal)$coefficients, 3)
+summary(Deer_model_multimodal_AD)
+signif(summary(Deer_model_unimodal_AD)$coefficients, 3)
 
-library(performance)
-# 決定係数の確認
-model_r2 <- r2_nakagawa(Deer_model_unimodal)
-print(model_r2)
+
 
 # イヌ単一キュー
 Deer_unimodal_dog <- subset(Deer, dog_visual == 1 & blinddog_visual == 0 &
                               human_acoustic == 0 & dog_acoustic == 0 & noise_acoustic == 0)
 View(Deer_unimodal_dog)
 # lmer()でLMMを構築
-Deer_model_unimodal_dog <- lm(
+Deer_model_unimodal_dog_AD <- lm(
   AD ~ 
     log_light +
     SD + 
@@ -846,20 +820,17 @@ Deer_model_unimodal_dog <- lm(
 )
 
 # 結果の確認
-summary(Deer_model_unimodal_dog)
-signif(summary(Deer_model_unimodal_dog)$coefficients, 3)
+summary(Deer_model_unimodal_dog_AD)
+signif(summary(Deer_model_unimodal_dog_AD)$coefficients, 3)
 
-library(performance)
-# 決定係数の確認
-model_r2 <- r2_nakagawa(Deer_model_unimodal)
-print(model_r2)
+
 
 # イヌ複数キュー
 Deer_multimodal_dog <- subset(Deer, dog_visual == 1 & blinddog_visual == 0 &
                                 human_acoustic == 0 & noise_acoustic == 0)
 View(Deer_multimodal_dog)
 # lmer()でLMMを構築
-Deer_model_multimodal_dog <- lm(
+Deer_model_multimodal_dog_AD <- lm(
   AD ~ 
     dog_acoustic +
     log_light +
@@ -872,13 +843,9 @@ Deer_model_multimodal_dog <- lm(
 )
 
 # 結果の確認
-summary(Deer_model_multimodal_dog)
-signif(summary(Deer_model_multimodal_dog)$coefficients, 3)
+summary(Deer_model_multimodal_dog_AD)
+signif(summary(Deer_model_multimodal_dog_AD)$coefficients, 3)
 
-library(performance)
-# 決定係数の確認
-model_r2 <- r2_nakagawa(Deer_model_unimodal)
-print(model_r2)
 
 
 #####
