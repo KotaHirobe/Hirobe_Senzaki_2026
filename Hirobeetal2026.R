@@ -75,7 +75,7 @@ merged_data$site_number <- match(merged_data$site_number, unique_sites)
 
 
 ###
-#同じ種で150m離れていないかつ7日以上日付が空いていないデータの片方を省く
+# Remove one record if the distance is less than 150 m and the date gap is under 7 days
 library(dplyr)
 merged_data$day <- as.Date(merged_data$day)
 merged_data <- merged_data[order(merged_data$site_number, merged_data$number), ]
@@ -91,7 +91,7 @@ merged_data <- merged_data %>%
 head(merged_data)
 table(merged_data$species)
 
-#季節を追加
+# Add seasons
 merged_data <- merged_data %>%
   mutate(
     season = case_when(
@@ -105,48 +105,46 @@ print(head(merged_data))
 
 
 
-#行動圏にあわせて番号を設定
+# Assign site IDs according to the home range
 library(geosphere) 
 
-# サイト番号列
+# Column for site numbers
 merged_data$site_number_core <- NA
 merged_data$site_number_home <- NA
 
 library(sf)
-# Deerをsfオブジェクトに変換
+# Convert "Deer" to an sf object
 Deer_sf <- st_as_sf(merged_data, coords = c("longitude", "latitude"), crs = 4326)
 Deer_utm <- st_transform(Deer_sf, crs = 32654)
 
-# Deerデータのバウンディングボックスを取得
+# Retrieve the bounding box of the Deer dataset
 bbox <- st_bbox(Deer_utm)
 
-# 5000m x 5000mのグリッドを作成
+# Geberate a 5 km * 5km grid
 grid <- st_make_grid(
   st_as_sfc(bbox), 
   cellsize = c(5000, 5000), 
   what = "polygons"
 ) %>% st_as_sf()
 
-# グリッドにIDを付与
+# Assign unique IDs to each grid cell
 grid <- grid %>% mutate(grid_id = row_number())
 
-# ポイントをグリッドに割り当て
+# Assign points to grid cells
 Deer_with_grid <- st_join(Deer_utm, grid)
 
 unique_sites <- unique(na.omit(Deer_with_grid$grid_id))
 Deer_with_grid$grid_id <- match(Deer_with_grid$grid_id, unique_sites)
 
-# グリッドIDを site_number_home に割り当て
+# Assign the grid ID to site_number_home
 merged_data <- merged_data %>% mutate(site_number_home = Deer_with_grid$grid_id)
 Deer_with_grid <- Deer_with_grid %>% mutate(site_number_home = Deer_with_grid$grid_id)
 
-# 結果の確認
 print(merged_data)
 
-# プロット
 library(ggplot2)
 ggplot() +
-  geom_sf(data = grid, fill = NA, color = "gray") + # グリッド
+  geom_sf(data = grid, fill = NA, color = "gray") + 
   geom_sf(data = Deer_with_grid, aes(color = as.factor(site_number_home)), size = 3) + # ポイント
   labs(color = "Location ID", title = NULL) +
   theme_classic()
@@ -156,17 +154,17 @@ library(ggplot2)
 library(rnaturalearth)
 library(rnaturalearthdata)
 
-# 日本の都道府県レベル（admin-1）を取得
+# Retrieve prefectire-level administrative boundaries of Japan
 jp_pref <- rnaturalearth::ne_states(country = "Japan", returnclass = "sf")
 
-# 北海道だけ抽出（name が "Hokkaido" のはず）
+# Filter the data to include only Hokkaido
 hokkaido <- subset(jp_pref, name == "Hokkaidō")
 
-# CRS をまず揃える（grid を基準に）
+# Match the CRS to that of the grid
 hokkaido2       <- st_transform(hokkaido, st_crs(grid))
 Deer_with_grid2 <- st_transform(Deer_with_grid, st_crs(grid))
 
-# bbox を「数値」で取り出す（ここがポイント）
+# Retreive the bounding box as numeric coordinates
 bb <- st_bbox(grid)
 
 ggplot() +
@@ -198,7 +196,7 @@ ggplot() +
   )  
 
 
-# 相関係数
+# Correlation efficient
 cor_vars <- Deer %>%
   dplyr::select(where(is.numeric))
 
@@ -213,7 +211,7 @@ library(Matrix)
 Deer <- subset(merged_data, FID <= 150)
 Deer$log_light <- log((Deer$light)+1)
 
-# cuesを分解して個別の変数に
+# Split cues into separate variables
 Deer <- Deer %>%
   mutate(
     human_visual = factor(ifelse(cues %in% c(
@@ -249,7 +247,7 @@ Deer <- Deer %>%
   )
 
 
-# 予備解析：プレイバックの有音時間の違いによるFIDの変化がないか検証
+# Preliminary analysis: test the effect of playback voiced duration on FID
 deer_prep <- Deer[Deer$human_acoustic == 1,]
 deer_prep$actime <- as.numeric(deer_prep$actime)
 
@@ -257,14 +255,14 @@ prep_deer_model <- lm(
   FID ~ log_light + SD + flock + AvgWind + season + actime,
   data = deer_prep
 )
-# 結果の確認
+
 summary(prep_deer_model)
 
 prep_AD <- lm(
   AD ~ log_light + SD + flock + AvgWind + season + actime,
   data = deer_prep
 )
-# 結果の確認
+
 summary(prep_AD)
 
 library(dplyr)
@@ -281,7 +279,7 @@ Deer <- Deer %>%
 Deer$season <- factor(Deer$season)  
 
 
-# lmer()でLMMを構築
+# Fit an LMM using lmer()
 Deer_model <- lmer(
   FID ~ 
     dog_visual + 
@@ -300,7 +298,6 @@ Deer_model <- lmer(
   data = Deer
 )
 
-# 結果の確認
 summary(Deer_model)
 signif(summary(Deer_model)$coefficients, 3)
 
@@ -316,11 +313,11 @@ Deer_model_p <- lmer(
 summary(Deer_model_p)
 
 library(performance)
-# 決定係数の確認
+# Calculate and inspect R2 values
 model_r2 <- r2_nakagawa(Deer_model)
 print(model_r2)
 
-# 相関も確認する
+# Check the correlation efficient
 library(car)
 vif(lm(FID ~ 
          dog_visual + 
@@ -338,28 +335,28 @@ vif(lm(FID ~
        data = Deer))
 
 
-# 信頼区間を計算
+# Calculate the confidence intervals
 conf_intervals_Deer <- confint(Deer_model)
 print(conf_intervals_Deer)
 
 conf_intervals_Deer <- conf_intervals_Deer[!rownames(conf_intervals_Deer) %in% c(".sig01", ".sig02",  ".sigma"), ]
 estimates <- summary(Deer_model)$coefficients
 
-# データフレームに変換
+# Convert to a data frame
 results <- data.frame(
   term = rownames(estimates),
   estimate = estimates[, "Estimate"],
   lwr = conf_intervals_Deer[, 1],
   upr = conf_intervals_Deer[, 2]
 )
-# NAの行を削除
+# Remove rows containing NA values
 results <- na.omit(results)
 print(results)
 signif(results$lwr, 3)
 signif(results$upr, 3)
 
 
-# FIDの推定値出す
+# Estimate FID values
 library(emmeans)
 
 emmeans_FID <- emmeans(
@@ -374,7 +371,7 @@ sub_8 <- subset(
   emm_df,
   (dog_visual == "0" & blinddog_visual == "0" & human_acoustic == "0" &
      dog_acoustic == "0" & noise_acoustic == "0") |
-    # 2) dog_visual1: dog_visual="1"のみ
+    # 2) dog_visual1: dog_visual="1"
     (dog_visual == "1" & blinddog_visual == "0" & human_acoustic == "0" &
        dog_acoustic == "0" & noise_acoustic == "0") |
     # 3) blinddog_visual1
@@ -448,7 +445,7 @@ sub_8 <- sub_8 %>%
     ),
     group = factor(group, levels = c("Baseline", "Human", "Dog", "Interaction", "Control")),
     
-    # x軸ラベル用
+    
     scenario_lab = case_when(
       scenario == "Intercept"                    ~ "Baseline (Approaching surveyor only)",
       scenario == "dog_visual1"                  ~ "Dog decoy",
@@ -506,7 +503,7 @@ Deer_model_AD <- lmer(
     (1 | site_number_home),
   data = Deer
 )
-# 結果の確認
+
 summary(Deer_model_AD)
 
 library(lmerTest)
@@ -521,29 +518,29 @@ Deer_model_AD_p <- lmer(
 summary(Deer_model_AD_p)
 
 library(performance)
-# 決定係数の確認
+# calculate and inspect the R2 values
 model_r2_AD <- r2_nakagawa(Deer_model_AD)
 print(model_r2_AD)
 
-# 信頼区間を計算 
+# Calculate the confidence intervals
 conf_intervals_Deer_AD <- confint(Deer_model_AD)
 print(conf_intervals_Deer_AD)
 
 conf_intervals_Deer_AD <- conf_intervals_Deer_AD[!rownames(conf_intervals_Deer_AD) %in% c(".sig01", ".sig02",  ".sigma"), ]
 estimates_AD <- summary(Deer_model_AD)$coefficients
 
-# データフレームに変換
+# Convert to a data frame
 results_AD <- data.frame(
   term = rownames(estimates_AD),
   estimate = estimates_AD[, "Estimate"],
   lwr = conf_intervals_Deer_AD[, 1],
   upr = conf_intervals_Deer_AD[, 2]
 )
-# NAの行を削除
+# Remove rows containing NA values
 results_AD <- na.omit(results_AD)
 print(results_AD)
 
-# ADの推定値出す
+# Estimate AD values
 library(emmeans)
 
 emmeans_AD <- emmeans(
@@ -558,7 +555,7 @@ sub_AD <- subset(
   emm_df_AD,
   (dog_visual == "0" & blinddog_visual == "0" & human_acoustic == "0" &
      dog_acoustic == "0" & noise_acoustic == "0") |
-    # 2) dog_visual1: dog_visual="1"のみ
+    # 2) dog_visual1: dog_visual="1"
     (dog_visual == "1" & blinddog_visual == "0" & human_acoustic == "0" &
        dog_acoustic == "0" & noise_acoustic == "0") |
     # 3) blinddog_visual1
@@ -631,7 +628,7 @@ sub_AD <- sub_AD %>%
     ),
     group = factor(group, levels = c("Baseline", "Human", "Dog", "Interaction", "Control")),
     
-    # x軸ラベル用
+    
     scenario_lab = case_when(
       scenario == "Intercept"                    ~ "Baseline (Approaching surveyor only)",
       scenario == "dog_visual1"                  ~ "Dog decoy",
@@ -671,32 +668,31 @@ ggplot(sub_AD, aes(x = scenario_lab, y = emmean)) +
 
 
 
-# FID単一キュー
+# FID Subset analysis using human unimodal cue
 Deer_unimodal <- subset(Deer, dog_visual == 0 & blinddog_visual == 0 &
                         human_acoustic == 0 & dog_acoustic == 0 & noise_acoustic == 0)
 View(Deer_unimodal)
-# lmer()でLMMを構築
+
 Deer_model_unimodal_FID <- lm(
   FID ~ 
     log_light +
     SD + 
     flock +
     AvgWind + 
-    season #+ 
-    #(1 | site_number_home),
+    season
   ,data = Deer_unimodal
 )
 
-# 結果の確認
+
 summary(Deer_model_unimodal_FID)
 signif(summary(Deer_model_unimodal_FID)$coefficients, 3)
 
 
-# multimodal
+# FID subset analysis using the human multimodal cues
 Deer_multimodal <- subset(Deer, dog_visual == 0 & blinddog_visual == 0 &
                           dog_acoustic == 0 & noise_acoustic == 0)
 View(Deer_multimodal)
-# lmer()でLMMを構築
+
 Deer_model_multimodal_FID <- lm(
   FID ~ 
     human_acoustic +
@@ -704,21 +700,20 @@ Deer_model_multimodal_FID <- lm(
     SD + 
     flock +
     AvgWind + 
-    season #+ 
-    #(1 | site_number_home),
+    season 
   ,data = Deer_multimodal
 )
 
-# 結果の確認
+
 summary(Deer_model_multimodal_FID)
 signif(summary(Deer_model_unimodal_FID)$coefficients, 3)
 
 
-# イヌ単一キュー
+# FID subset analysis using the dog unimodal cue
 Deer_unimodal_dog <- subset(Deer, dog_visual == 1 & blinddog_visual == 0 &
                           human_acoustic == 0 & dog_acoustic == 0 & noise_acoustic == 0)
 View(Deer_unimodal_dog)
-# lmer()でLMMを構築
+
 Deer_model_unimodal_dog_FID <- lm(
   FID ~ 
     log_light +
@@ -726,20 +721,19 @@ Deer_model_unimodal_dog_FID <- lm(
     flock +
     AvgWind + 
     season 
-    #(1 | site_number_home),
   ,data = Deer_unimodal_dog
 )
 
-# 結果の確認
+
 summary(Deer_model_unimodal_dog_FID)
 signif(summary(Deer_model_unimodal_dog_FID)$coefficients, 3)
 
 
-# イヌ複数キュー
+# FID subset analysis using the dog multimodal cues
 Deer_multimodal_dog <- subset(Deer, dog_visual == 1 & blinddog_visual == 0 &
                           human_acoustic == 0 & noise_acoustic == 0)
 View(Deer_multimodal_dog)
-# lmer()でLMMを構築
+
 Deer_model_multimodal_dog_FID <- lm(
   FID ~ 
     dog_acoustic +
@@ -748,43 +742,41 @@ Deer_model_multimodal_dog_FID <- lm(
     flock +
     AvgWind + 
     season,
-    #(1 | site_number_home),
   data = Deer_multimodal_dog
 )
 
-# 結果の確認
+
 summary(Deer_model_multimodal_dog_FID)
 signif(summary(Deer_model_multimodal_dog_FID)$coefficients, 3)
 
 
 
-# AD単一キュー
+# AD subset analysis using the human unimodal cue
 Deer_unimodal <- subset(Deer, dog_visual == 0 & blinddog_visual == 0 &
                           human_acoustic == 0 & dog_acoustic == 0 & noise_acoustic == 0)
 View(Deer_unimodal)
-# lmer()でLMMを構築
+
 Deer_model_unimodal_AD <- lm(
   AD ~ 
     log_light +
     SD + 
     flock +
     AvgWind + 
-    season #+ 
-  #(1 | site_number_home),
+    season 
   ,data = Deer_unimodal
 )
 
-# 結果の確認
+
 summary(Deer_model_unimodal_AD)
 signif(summary(Deer_model_unimodal_AD)$coefficients, 3)
 
 
 
-# multimodal
+# AD subset analysis using the human multimodal cue
 Deer_multimodal <- subset(Deer, dog_visual == 0 & blinddog_visual == 0 &
                             dog_acoustic == 0 & noise_acoustic == 0)
 View(Deer_multimodal)
-# lmer()でLMMを構築
+\
 Deer_model_multimodal_AD <- lm(
   AD ~ 
     human_acoustic +
@@ -792,22 +784,21 @@ Deer_model_multimodal_AD <- lm(
     SD + 
     flock +
     AvgWind + 
-    season #+ 
-  #(1 | site_number_home),
+    season 
   ,data = Deer_multimodal
 )
 
-# 結果の確認
+
 summary(Deer_model_multimodal_AD)
 signif(summary(Deer_model_unimodal_AD)$coefficients, 3)
 
 
 
-# イヌ単一キュー
+# AD subset analysis using the dog unimodal cue
 Deer_unimodal_dog <- subset(Deer, dog_visual == 1 & blinddog_visual == 0 &
                               human_acoustic == 0 & dog_acoustic == 0 & noise_acoustic == 0)
 View(Deer_unimodal_dog)
-# lmer()でLMMを構築
+
 Deer_model_unimodal_dog_AD <- lm(
   AD ~ 
     log_light +
@@ -815,21 +806,20 @@ Deer_model_unimodal_dog_AD <- lm(
     flock +
     AvgWind + 
     season 
-  #(1 | site_number_home),
   ,data = Deer_unimodal_dog
 )
 
-# 結果の確認
+
 summary(Deer_model_unimodal_dog_AD)
 signif(summary(Deer_model_unimodal_dog_AD)$coefficients, 3)
 
 
 
-# イヌ複数キュー
+# AD subset analysis using the dogs multimodal cue
 Deer_multimodal_dog <- subset(Deer, dog_visual == 1 & blinddog_visual == 0 &
                                 human_acoustic == 0 & noise_acoustic == 0)
 View(Deer_multimodal_dog)
-# lmer()でLMMを構築
+
 Deer_model_multimodal_dog_AD <- lm(
   AD ~ 
     dog_acoustic +
@@ -838,18 +828,16 @@ Deer_model_multimodal_dog_AD <- lm(
     flock +
     AvgWind + 
     season,
-  #(1 | site_number_home),
   data = Deer_multimodal_dog
 )
 
-# 結果の確認
+
 summary(Deer_model_multimodal_dog_AD)
 signif(summary(Deer_model_multimodal_dog_AD)$coefficients, 3)
 
 
 
-#####
-#説明変数の分布をプロット
+# Plot distributions of explanatory variables ####
 ggplot(data = Deer, aes(x = cues, fill = day_or_night)) +
   geom_bar(stat = "count") +
   xlab(NULL) +
