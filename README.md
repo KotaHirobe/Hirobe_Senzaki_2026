@@ -1,4 +1,4 @@
-# hirobe_et_al_2026
+# Hirobe & Senzaki., 2026
 R code and data for statistical analysis for the following paper:
 
 Hirobe, K., Senzaki, M. 
