@@ -1,4 +1,4 @@
-# Hirobe & Senzaki., 2026
+# Dataset and Code
 R code and data for statistical analysis for the following paper:
 
 "Multimodal human and pet cues intensify wildlife fear responses"
