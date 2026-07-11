@@ -25,7 +25,9 @@ ggplot(long_data, aes(x = dist, y = value, color = variable, group = variable)) 
 merged_data <- read.csv(here("Deer_FID_AD.csv"))
 
 # Delete NA
-merged_data <- na.omit(merged_data)
+library(dplyr)
+merged_data <- merged_data %>%
+  filter(if_all(-actime, ~ !is.na(.)))
 
 # Read "light" as a numeric value
 merged_data$light <- as.numeric(merged_data$light)
@@ -52,8 +54,6 @@ table(merged_data$day_or_night)
 # Convert the time to a decimal value
 library(lubridate)
 merged_data$time_num <- hour(merged_data$time) + minute(merged_data$time)/60
-
-
 
 
 # Assign site numbers to each observation ####
@@ -115,7 +115,7 @@ merged_data$site_number_core <- NA
 merged_data$site_number_home <- NA
 
 library(sf)
-# Convert "Deer" to an sf object
+# Convert to an sf object
 Deer_sf <- st_as_sf(merged_data, coords = c("longitude", "latitude"), crs = 4326)
 Deer_utm <- st_transform(Deer_sf, crs = 32654)
 
@@ -154,7 +154,6 @@ ggplot() +
 library(sf)
 library(ggplot2)
 library(rnaturalearth)
-library(rnaturalearthdata)
 
 # Retrieve prefectire-level administrative boundaries of Japan
 jp_pref <- rnaturalearth::ne_states(country = "Japan", returnclass = "sf")
@@ -198,13 +197,6 @@ ggplot() +
   )  
 
 
-# Correlation efficient
-cor_vars <- Deer %>%
-  dplyr::select(where(is.numeric))
-
-cor_matrix <- cor(cor_vars, use = "complete.obs", method = "pearson")
-print(cor_matrix)
-
 
 # LMM ####
 library(lme4)
@@ -212,6 +204,13 @@ library(Matrix)
 
 Deer <- subset(merged_data, FID <= 150)
 Deer$log_light <- log((Deer$light)+1)
+
+# Correlation efficient
+cor_vars <- Deer %>%
+  dplyr::select(where(is.numeric))
+
+cor_matrix <- cor(cor_vars, use = "complete.obs", method = "pearson")
+print(cor_matrix)
 
 # Split cues into separate variables
 Deer <- Deer %>%
