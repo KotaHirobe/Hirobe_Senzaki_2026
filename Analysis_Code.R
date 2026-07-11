@@ -1,5 +1,7 @@
 # Checking sound attenuation ####
-Soundlevel <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_al_2026/refs/heads/main/Hirobeetal2026AcousticAttenuation.csv")
+install.packages("here")
+library(here)
+Soundlevel <- read.csv(here("AcousticAttenuation.csv"))
 
 print(head(Soundlevel))
 
@@ -20,7 +22,7 @@ ggplot(long_data, aes(x = dist, y = value, color = variable, group = variable)) 
 
 
 # Loading the data ####
-merged_data <- read.csv("https://raw.githubusercontent.com/KotaHirobe/Hirobe_et_al_2026/refs/heads/main/Hirobeetal2026.csv")
+merged_data <- read.csv(here("Deer_FID_AD.csv"))
 
 # Delete NA
 merged_data <- na.omit(merged_data)
@@ -776,7 +778,7 @@ signif(summary(Deer_model_unimodal_AD)$coefficients, 3)
 Deer_multimodal <- subset(Deer, dog_visual == 0 & blinddog_visual == 0 &
                             dog_acoustic == 0 & noise_acoustic == 0)
 View(Deer_multimodal)
-\
+
 Deer_model_multimodal_AD <- lm(
   AD ~ 
     human_acoustic +
